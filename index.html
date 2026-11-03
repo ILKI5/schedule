@@ -268,10 +268,7 @@ body.dark .empty-day .empty-text{color:#666}
     </div>
     <div class="settings-card">
         <div class="settings-title"><i class="fas fa-palette"></i> Внешний вид</div>
-        <div class="settings-item">
-            <strong><i class="fas fa-moon"></i> Тёмная тема</strong>
-            <label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="toggle-slider"></span></label>
-        </div>
+        <div class="settings-item"><strong><i class="fas fa-moon"></i> Тёмная тема</strong><label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="toggle-slider"></span></label></div>
     </div>
     <div class="settings-card">
         <div class="settings-title"><i class="fas fa-check-circle"></i> Функции</div>
@@ -309,7 +306,8 @@ var CHECK_INTERVAL_MS = 60 * 60 * 1000;
 var scheduleData = {};
 var timeSlots = ["09.00-10.35", "10.45-12.20", "13.00-14.35", "14.45-16.20", "16.30-18.05"];
 var weekdayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-var weekdayRu = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+// Согласовано с getUTCDay(): 0=Вс, 1=Пн, ..., 6=Сб
+var weekdayRu = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 
 function formatVersion(iso) {
     if (!iso) return '—';
@@ -329,10 +327,13 @@ function setUpdateStatus(text, isError) {
     if (el) { el.textContent = text; el.style.color = isError ? '#e74c3c' : '#888'; }
 }
 
+// "09.00-10.35 перерыв 09.45-09.50" -> "09.00-10.35"
 function normalizeSlot(slot) {
     if (!slot) return '';
     return String(slot).split(' перерыв')[0].trim();
 }
+
+// Парсит "07.09.26" в Date (UTC, чтобы не зависеть от таймзоны)
 function parseDateShort(str) {
     if (!str) return null;
     var p = String(str).trim().split('.');
@@ -340,43 +341,60 @@ function parseDateShort(str) {
     var d = parseInt(p[0],10), m = parseInt(p[1],10) - 1, y = parseInt(p[2],10);
     if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
     if (y < 100) y += 2000;
-    return new Date(y, m, d);
+    // используем Date.UTC, чтобы getUTCDay() был стабильным
+    return new Date(Date.UTC(y, m, d));
 }
-function formatDate(d) {
+function formatDateUTC(d) {
+    return String(d.getUTCDate()).padStart(2,'0') + '.' + String(d.getUTCMonth()+1).padStart(2,'0') + '.' + d.getUTCFullYear();
+}
+function formatDateLocal(d) {
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
 }
 
-// КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: проверяем item.day — пара попадает только в свой день недели
+// ЖЁСТКИЙ ФИЛЬТР: пара попадает на дату, только если
+//  1) день недели даты совпадает с item.day
+//  2) дата попадает в диапазон/список item.dates
 function datesForItem(item) {
     if (!item.dates) return [];
-    var targetDay = item.day ? item.day.toLowerCase() : null;
+    var targetDay = item.day ? item.day.trim().toLowerCase() : null;
     var parts = item.dates.split(',');
     var result = [];
+
     for (var j = 0; j < parts.length; j++) {
         var part = parts[j].trim();
         if (!part) continue;
+
+        // поддержка -, –, —
         var rm = part.split(/\s*[-–—]\s*/);
         var candidates = [];
+
         if (rm.length === 2) {
             var s = parseDateShort(rm[0]), e = parseDateShort(rm[1]);
             if (s && e) {
-                var c = new Date(s);
-                while (c <= e) { candidates.push(new Date(c)); c.setDate(c.getDate() + 1); }
+                var c = new Date(s.getTime());
+                while (c.getTime() <= e.getTime()) {
+                    candidates.push(new Date(c.getTime()));
+                    c.setUTCDate(c.getUTCDate() + 1);
+                }
             }
         } else {
             var d = parseDateShort(part);
             if (d) candidates.push(d);
         }
+
         for (var k = 0; k < candidates.length; k++) {
             var dd = candidates[k];
-            if (dd.getDay() === 0) continue;
+            var dow = dd.getUTCDay(); // 0=Вс, 1=Пн, ...
+            if (dow === 0) continue; // воскресенье — пар нет
             if (targetDay) {
-                var ruDay = weekdayRu[dd.getDay()].toLowerCase();
-                if (ruDay !== targetDay) continue;
+                var ruDay = weekdayRu[dow].toLowerCase();
+                if (ruDay !== targetDay) continue; // ЖЁСТКАЯ ПРОВЕРКА ДНЯ НЕДЕЛИ
             }
-            result.push(formatDate(dd));
+            result.push(formatDateUTC(dd));
         }
     }
+
+    // уникальные
     var seen = {}, uniq = [];
     for (var i = 0; i < result.length; i++) {
         if (!seen[result[i]]) { seen[result[i]] = true; uniq.push(result[i]); }
@@ -429,7 +447,12 @@ function getDayLessons(dateStr) {
         if (dayData[slot]) {
             for (var j = 0; j < dayData[slot].length; j++) {
                 var l = dayData[slot][j];
-                if (chosen && l.subgroup && l.subgroup !== chosen) continue;
+                // жёсткий фильтр по подгруппе:
+                // - если выбрана конкретная подгруппа, показываем пары этой подгруппы и пары без подгруппы
+                // - если выбрано «обе», показываем всё
+                if (chosen) {
+                    if (l.subgroup && l.subgroup !== chosen) continue;
+                }
                 l.time_slot = slot;
                 lessons.push(l);
             }
@@ -538,7 +561,7 @@ function findNextLessonDay(fromDate) {
     var d = new Date(fromDate); d.setDate(d.getDate() + 1);
     for (var i = 0; i < 60; i++) {
         if (d.getDay() !== 0) {
-            var dateStr = formatDate(d);
+            var dateStr = formatDateLocal(d);
             if (getDayLessons(dateStr).length > 0) return new Date(d);
         }
         d.setDate(d.getDate() + 1);
@@ -566,7 +589,7 @@ function renderCalendar() {
     for (var day = 1; day <= daysInMonth; day++) {
         var d = new Date(currentYearView, currentMonthView, day);
         if (d.getDay() === 0) continue;
-        var dateStr = formatDate(d);
+        var dateStr = formatDateLocal(d);
         var hasLesson = getDayLessons(dateStr).length > 0;
         var hasNote = hasNotesOnDate(dateStr);
         var cls = 'cal-day';
@@ -609,7 +632,7 @@ function renderDaysCarousel() {
     for (var i = 0; i < 6; i++) {
         var d = new Date(monday);
         d.setDate(monday.getDate() + i);
-        var dateStr = formatDate(d);
+        var dateStr = formatDateLocal(d);
         var isActive = isSameDay(d, selectedDate);
         var dayName = weekdayShort[d.getDay() === 0 ? 6 : d.getDay() - 1];
         var dayNum = String(d.getDate()).padStart(2, '0');
@@ -636,7 +659,7 @@ function renderDaysCarousel() {
 }
 
 function renderSchedule() {
-    var dateStr = formatDate(selectedDate);
+    var dateStr = formatDateLocal(selectedDate);
     var lessons = getDayLessons(dateStr);
     var list = document.getElementById('scheduleList');
     if (!list) return;
@@ -684,7 +707,6 @@ function renderSchedule() {
         var progress = getLessonProgress(lesson.time_slot, dateStr);
         var startStr = lesson.time_slot.split('-')[0].trim();
         var endStr = lesson.time_slot.split('-')[1].trim();
-
         var lineProgressHeight = 0;
         var progressDotHtml = '';
         var lineClass = 'timeline-line ' + typeClass;
@@ -964,10 +986,8 @@ async function init() {
     try {
         applyDarkMode();
         initMenu();
-
         var savedGroup = localStorage.getItem('groupName') || '';
         document.getElementById('groupNameInput').value = savedGroup;
-
         var savedSub = localStorage.getItem('selectedSubgroup') || '';
         var subSel = document.getElementById('subgroupSelect');
         if (subSel) {
@@ -977,7 +997,6 @@ async function init() {
                 renderAll();
             });
         }
-
         safeAddListener('calendarToggleBtn', 'click', toggleCalendar);
         safeAddListener('todayBtn', 'click', goToToday);
         safeAddListener('prevMonthBtn', 'click', function() { currentMonthView--; if (currentMonthView < 0) { currentMonthView = 11; currentYearView--; } renderCalendar(); });
@@ -987,16 +1006,13 @@ async function init() {
         safeAddListener('darkModeToggle', 'change', function(e) { isDarkMode = e.target.checked; localStorage.setItem('darkMode', isDarkMode); applyDarkMode(); });
         safeAddListener('showCheckinsToggle', 'change', function(e) { showCheckins = e.target.checked; localStorage.setItem('showCheckins', showCheckins); renderAll(); });
         safeAddListener('showProductivityToggle', 'change', function(e) { showProductivity = e.target.checked; localStorage.setItem('showProductivity', showProductivity); renderAll(); });
-
         safeAddListener('saveGroupBtn', 'click', function() {
             var name = document.getElementById('groupNameInput').value.trim();
             if (name) {
                 localStorage.setItem('groupName', name);
                 localStorage.removeItem('scheduleVersion');
                 loadSchedule();
-            } else {
-                alert('Введите название группы');
-            }
+            } else { alert('Введите название группы'); }
         });
         safeAddListener('forceUpdateBtn', 'click', async function() {
             var btn = document.getElementById('forceUpdateBtn');
@@ -1007,13 +1023,10 @@ async function init() {
         });
         safeAddListener('noteModal', 'click', function(e) { if (e.target === this) closeNoteModal(); });
         safeAddListener('confirmOverlay', 'click', function(e) { if (e.target === this) closeConfirm(); });
-
         setupScheduleSwipe();
         setupCalendarSwipe();
-
         if (savedGroup) await loadSchedule();
         else { renderAll(); setUpdateStatus('Укажите группу в настройках', true); }
-
         setInterval(function() { if (currentTab === 'schedule') renderSchedule(); }, 30000);
     } catch(err) {
         console.error('Init error:', err);
