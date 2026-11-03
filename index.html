@@ -302,6 +302,7 @@ body.dark .empty-day .empty-text{color:#666}
 
 var GITHUB_BASE_URL = "https://ilki5.github.io/schedule";
 var CHECK_INTERVAL_MS = 60 * 60 * 1000;
+var DATA_VERSION = 4; // Обновлено для поддержки уникальных ключей дат
 
 var scheduleData = {};
 var weekdayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
@@ -351,35 +352,22 @@ function formatDateLocal(d) {
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
 }
 
-// === ТОЧНОЕ ОПРЕДЕЛЕНИЕ НЕДЕЛИ (Верхняя/Нижняя) ОТ 1 СЕНТЯБРЯ ===
 function getWeekType(date) {
-    // Все вычисления строго в UTC
     var year = date.getUTCFullYear();
     var month = date.getUTCMonth();
-    
-    // Если месяц до августа (январь-июль), учебный год начался в прошлом году
     if (month < 7) year -= 1;
     
-    // 1 сентября текущего учебного года (в UTC)
     var sep1 = new Date(Date.UTC(year, 8, 1));
-    
-    // Находим понедельник той недели, на которую выпало 1 сентября
-    var dow = sep1.getUTCDay(); // 0=Вс, 1=Пн
+    var dow = sep1.getUTCDay();
     var diffToMon = (dow === 0) ? 6 : dow - 1;
     var startOfAcademicWeek1 = new Date(sep1.getTime());
     startOfAcademicWeek1.setUTCDate(startOfAcademicWeek1.getUTCDate() - diffToMon);
     
-    // Очищаем время проверяемой даты (оставляем только дату)
     var targetDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-    
-    // Считаем разницу в днях между проверяемой датой и началом 1-й учебной недели
     var diffTime = targetDate.getTime() - startOfAcademicWeek1.getTime();
     var diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    // Делим на 7, чтобы получить номер недели (0, 1, 2...)
     var weekNum = Math.floor(diffDays / 7) + 1;
     
-    // Если нечетная неделя (1, 3, 5...) - Верхняя, четная (2, 4, 6...) - Нижняя
     return (weekNum % 2 !== 0) ? 'Верхняя' : 'Нижняя';
 }
 
@@ -519,10 +507,14 @@ async function loadSchedule() {
         var versionResp = await fetch(versionUrl + '?t=' + Date.now());
         if (!versionResp.ok) throw new Error('Файл версии не найден');
         var versionData = await versionResp.json();
+        
         var localVersion = localStorage.getItem('scheduleVersion');
+        var localDataVersion = localStorage.getItem('dataVersion');
+        
         document.getElementById('currentVersion').textContent = formatVersion(versionData.updatedAt);
         document.getElementById('lastCheckDisplay').textContent = formatTimestamp(Date.now());
-        if (versionData.updatedAt === localVersion) {
+        
+        if (versionData.updatedAt === localVersion && localDataVersion === String(DATA_VERSION)) {
             setUpdateStatus('Обновлений нет');
             var cached = localStorage.getItem('scheduleData');
             if (cached) scheduleData = JSON.parse(cached);
@@ -534,8 +526,11 @@ async function loadSchedule() {
         if (!scheduleResp.ok) throw new Error('JSON не найден');
         var rawJson = await scheduleResp.json();
         scheduleData = parseScheduleJson(rawJson);
+        
         localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
         localStorage.setItem('scheduleVersion', versionData.updatedAt);
+        localStorage.setItem('dataVersion', String(DATA_VERSION));
+        
         setUpdateStatus('Расписание обновлено!');
         renderAll();
     } catch(e) {
@@ -573,6 +568,11 @@ function getTypeClass(type) {
     if (type === 'Практика') return 'practice';
     if (type === 'Лабораторная') return 'lab';
     return 'lecture';
+}
+
+// НОВАЯ ФУНКЦИЯ ДЛЯ УНИКАЛЬНОГО КЛЮЧА
+function getLessonCheckinKey(lessonId, dateStr) {
+    return dateStr + '|' + lessonId;
 }
 
 function getCurrentMinutes() { var now = new Date(); return now.getHours()*60+now.getMinutes(); }
@@ -772,23 +772,28 @@ function renderSchedule() {
         var progressBarHtml = isActive ? '<div class="card-progress"><div class="progress-fill" style="width: ' + Math.round(progress * 100) + '%;"></div></div>' : '';
         var roomDisplay = lesson.room || '';
         var subgroupHtml = lesson.subgroup ? ' <span style="font-size:0.65rem;color:#999;">(' + lesson.subgroup + ')</span>' : '';
-        var hasNote = !!notes[lesson.id];
+        
+        // ИСПОЛЬЗУЕМ УНИКАЛЬНЫЙ КЛЮЧ ДЛЯ КАЖДОЙ ДАТЫ
+        var key = getLessonCheckinKey(lesson.id, dateStr);
+        
+        var hasNote = !!notes[key];
         var noteIndicator = hasNote ? '<i class="fas fa-sticky-note card-note-indicator"></i>' : '';
-        var isChecked = !!checkins[lesson.id];
+        var isChecked = !!checkins[key];
         var actionsHtml = '';
         if (showCheckins) {
             var cls = isChecked ? 'checkin checked' : 'checkin';
             var txt = isChecked ? '<i class="fas fa-check-circle"></i> Отмечено' : '<i class="fas fa-check-circle"></i> Отметиться';
-            actionsHtml += '<button class="action-btn ' + cls + '" data-action="checkin" data-id="' + lesson.id + '">' + txt + '</button>';
+            actionsHtml += '<button class="action-btn ' + cls + '" data-action="checkin" data-key="' + key + '">' + txt + '</button>';
         }
         if (showProductivity) {
-            actionsHtml += '<button class="action-btn note" data-action="note" data-id="' + lesson.id + '"><i class="fas fa-pen"></i> ' + (hasNote ? 'Изменить' : 'Заметка') + '</button>';
+            actionsHtml += '<button class="action-btn note" data-action="note" data-key="' + key + '"><i class="fas fa-pen"></i> ' + (hasNote ? 'Изменить' : 'Заметка') + '</button>';
         }
         var noteTextHtml = '';
         if (hasNote && showProductivity) {
-            var txt2 = notes[lesson.id].length > 50 ? notes[lesson.id].substring(0, 50) + '...' : notes[lesson.id];
-            noteTextHtml = '<div class="card-note-text"><span><i class="fas fa-sticky-note"></i> ' + txt2 + '</span><button class="delete-note-btn" data-delete="' + lesson.id + '">Удалить</button></div>';
+            var txt2 = notes[key].length > 50 ? notes[key].substring(0, 50) + '...' : notes[key];
+            noteTextHtml = '<div class="card-note-text"><span><i class="fas fa-sticky-note"></i> ' + txt2 + '</span><button class="delete-note-btn" data-key="' + key + '">Удалить</button></div>';
         }
+        
         html += '<div class="lesson-row"><div class="lesson-timeline">' +
             '<div class="pair-number ' + typeClass + '">' + pairIndex + '</div>' +
             '<div class="time-start">' + startStr + '</div>' +
@@ -818,32 +823,32 @@ function renderSchedule() {
     var checkinBtns = list.querySelectorAll('.action-btn[data-action="checkin"]');
     for (var i = 0; i < checkinBtns.length; i++) {
         (function(btn) {
-            btn.addEventListener('click', function(e) { e.stopPropagation(); toggleCheckin(btn.getAttribute('data-id')); });
+            btn.addEventListener('click', function(e) { e.stopPropagation(); toggleCheckin(btn.getAttribute('data-key')); });
         })(checkinBtns[i]);
     }
     var noteBtns = list.querySelectorAll('.action-btn[data-action="note"]');
     for (var i = 0; i < noteBtns.length; i++) {
         (function(btn) {
-            btn.addEventListener('click', function(e) { e.stopPropagation(); openNoteModal(btn.getAttribute('data-id')); });
+            btn.addEventListener('click', function(e) { e.stopPropagation(); openNoteModal(btn.getAttribute('data-key')); });
         })(noteBtns[i]);
     }
     var delBtns = list.querySelectorAll('.delete-note-btn');
     for (var i = 0; i < delBtns.length; i++) {
         (function(btn) {
-            btn.addEventListener('click', function(e) { e.stopPropagation(); showConfirm(btn.getAttribute('data-delete')); });
+            btn.addEventListener('click', function(e) { e.stopPropagation(); showConfirm(btn.getAttribute('data-key')); });
         })(delBtns[i]);
     }
 }
 
-function toggleCheckin(lessonId) {
-    if (checkins[lessonId]) delete checkins[lessonId];
-    else checkins[lessonId] = { id: lessonId, date: new Date().toISOString() };
+function toggleCheckin(key) {
+    if (checkins[key]) delete checkins[key];
+    else checkins[key] = { date: new Date().toISOString() };
     localStorage.setItem('lessonCheckins', JSON.stringify(checkins));
     renderSchedule();
 }
-function openNoteModal(lessonId) {
-    currentLessonId = lessonId;
-    document.getElementById('noteText').value = notes[lessonId] || '';
+function openNoteModal(key) {
+    currentLessonId = key;
+    document.getElementById('noteText').value = notes[key] || '';
     document.getElementById('noteModal').style.display = 'flex';
 }
 function closeNoteModal() {
@@ -864,7 +869,7 @@ function saveNote() {
 window.saveNote = saveNote;
 
 var pendingDeleteId = null;
-function showConfirm(lessonId) { pendingDeleteId = lessonId; document.getElementById('confirmOverlay').classList.add('active'); }
+function showConfirm(key) { pendingDeleteId = key; document.getElementById('confirmOverlay').classList.add('active'); }
 function closeConfirm() { pendingDeleteId = null; document.getElementById('confirmOverlay').classList.remove('active'); }
 function confirmAction() {
     if (pendingDeleteId) {
@@ -889,7 +894,8 @@ function updateStats() {
                 if (!stats[subj]) stats[subj] = {};
                 if (!stats[subj][cat]) stats[subj][cat] = { total: 0, checked: 0 };
                 stats[subj][cat].total++;
-                if (checkins[lesson.id]) stats[subj][cat].checked++;
+                var key = getLessonCheckinKey(lesson.id, dateStr);
+                if (checkins[key]) stats[subj][cat].checked++;
             }
         }
     }
@@ -1061,6 +1067,7 @@ async function init() {
             if (name) {
                 localStorage.setItem('groupName', name);
                 localStorage.removeItem('scheduleVersion');
+                localStorage.removeItem('dataVersion');
                 loadSchedule();
             } else { alert('Введите название группы'); }
         });
@@ -1068,6 +1075,7 @@ async function init() {
             var btn = document.getElementById('forceUpdateBtn');
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...'; }
             localStorage.removeItem('scheduleVersion');
+            localStorage.removeItem('dataVersion');
             await loadSchedule();
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Проверить обновления'; }
         });
