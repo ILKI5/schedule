@@ -351,21 +351,35 @@ function formatDateLocal(d) {
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
 }
 
-// === Определение недели (Верхняя/Нижняя) ===
+// === ТОЧНОЕ ОПРЕДЕЛЕНИЕ НЕДЕЛИ (Верхняя/Нижняя) ОТ 1 СЕНТЯБРЯ ===
 function getWeekType(date) {
-    var d = new Date(date.getTime());
-    var year = d.getFullYear();
-    var month = d.getMonth();
+    // Все вычисления строго в UTC
+    var year = date.getUTCFullYear();
+    var month = date.getUTCMonth();
     
     // Если месяц до августа (январь-июль), учебный год начался в прошлом году
     if (month < 7) year -= 1;
     
-    var startOfYear = new Date(Date.UTC(year, 8, 1)); // 1 сентября текущего учебного года
-    var diffTime = d.getTime() - startOfYear.getTime();
+    // 1 сентября текущего учебного года (в UTC)
+    var sep1 = new Date(Date.UTC(year, 8, 1));
+    
+    // Находим понедельник той недели, на которую выпало 1 сентября
+    var dow = sep1.getUTCDay(); // 0=Вс, 1=Пн
+    var diffToMon = (dow === 0) ? 6 : dow - 1;
+    var startOfAcademicWeek1 = new Date(sep1.getTime());
+    startOfAcademicWeek1.setUTCDate(startOfAcademicWeek1.getUTCDate() - diffToMon);
+    
+    // Очищаем время проверяемой даты (оставляем только дату)
+    var targetDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    
+    // Считаем разницу в днях между проверяемой датой и началом 1-й учебной недели
+    var diffTime = targetDate.getTime() - startOfAcademicWeek1.getTime();
     var diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Делим на 7, чтобы получить номер недели (0, 1, 2...)
     var weekNum = Math.floor(diffDays / 7) + 1;
     
-    // Если нечетная неделя - Верхняя, четная - Нижняя
+    // Если нечетная неделя (1, 3, 5...) - Верхняя, четная (2, 4, 6...) - Нижняя
     return (weekNum % 2 !== 0) ? 'Верхняя' : 'Нижняя';
 }
 
@@ -437,7 +451,7 @@ function parseScheduleJson(json) {
                     room: location,
                     is_distance: item.isDistance,
                     subgroup: item.subgroup || '',
-                    week: item.week || '', // сохраняем неделю
+                    week: item.week || '',
                     dates: item.dates,
                     day: item.day || ''
                 });
@@ -465,8 +479,6 @@ function getDayLessons(dateStr) {
     var p = dateStr.split('.');
     var dObj = new Date(Date.UTC(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10)));
     var ruDayOfDate = weekdayRu[dObj.getUTCDay()].toLowerCase();
-    
-    // Определяем, какая неделя идет на эту дату
     var weekTypeOfDate = getWeekType(dObj);
 
     var slotKeys = Object.keys(dayData);
@@ -477,14 +489,10 @@ function getDayLessons(dateStr) {
         
         for (var j = 0; j < arr.length; j++) {
             var l = arr[j];
-            
             if (l.day && l.day.toLowerCase() !== ruDayOfDate) continue;
-            
-            // Жёсткая проверка по неделе (Верхняя/Нижняя)
             if (l.week) {
                 if (l.week.toLowerCase() !== weekTypeOfDate.toLowerCase()) continue;
             }
-            
             if (chosen && l.subgroup && l.subgroup !== chosen) continue;
             
             var copy = {};
@@ -729,7 +737,6 @@ function renderSchedule() {
     if (practiceCount > 0) parts.push('Практик ' + practiceCount);
     if (labCount > 0) parts.push('Лаб ' + labCount);
     
-    // Добавляем информацию о неделе
     var pObj = dateStr.split('.');
     var currentDateObj = new Date(Date.UTC(+pObj[2], +pObj[1]-1, +pObj[0]));
     var weekStr = getWeekType(currentDateObj);
