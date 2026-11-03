@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Расписание РГГМУ</title>
 <style>
-/* ============ ВАШИ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ ============ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
@@ -278,7 +277,6 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
 <div id="statsTab" class="fullscreen-tab"><div id="statsContainer"></div></div>
 
 <div id="settingsTab" class="fullscreen-tab">
-    <!-- НОВОЕ: Настройка группы -->
     <div class="settings-card">
         <div class="settings-title"><i class="fas fa-users"></i> Группа</div>
         <div class="settings-item">
@@ -359,16 +357,16 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
 <script>
 (function() {
     'use strict';
-    
+
     // Базовый URL к вашему репозиторию на GitHub Pages (замените на свой)
     var GITHUB_BASE_URL = "https://ilki5.github.io/schedule";
     var CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 час
-    
+
     var scheduleData = {};
     var timeSlots = ["09.00-10.35", "10.45-12.20", "13.00-14.35", "14.45-16.20", "16.30-18.05"];
     var weekdayNames = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
     var weekdayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-    
+
     function formatVersion(iso) {
         if (!iso) return '—';
         try {
@@ -382,7 +380,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             return dd + '.' + mm + '.' + yyyy + ' ' + hh + ':' + mi;
         } catch(e) { return iso; }
     }
-    
+
     function formatTimestamp(ms) {
         if (!ms) return '—';
         var d = new Date(ms);
@@ -393,143 +391,122 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         var mi = String(d.getMinutes()).padStart(2, '0');
         return dd + '.' + mm + '.' + yyyy + ' ' + hh + ':' + mi;
     }
-    
+
     function setUpdateStatus(text, isError) {
         var el = document.getElementById('updateStatus');
         if (el) { el.textContent = text; el.style.color = isError ? '#e74c3c' : '#888'; }
     }
-    
-    // Парсинг JSON из формата EXE (массив items) в формат дат
+
+    // === ИСПРАВЛЕНИЕ 1: нормализация слота ===
+    // "09.00-10.35 перерыв 09.45-09.50" -> "09.00-10.35"
+    function normalizeSlot(slot) {
+        if (!slot) return '';
+        return String(slot).split(' перерыв')[0].trim();
+    }
+
+    // === ИСПРАВЛЕНИЕ 2: парсинг дат с поддержкой -, –, — ===
+    function parseDateShort(str) {
+        if (!str) return null;
+        str = String(str).trim();
+        var parts = str.split('.');
+        if (parts.length < 3) return null;
+        var day = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10) - 1;
+        var year = parseInt(parts[2], 10);
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+        if (year < 100) year += 2000;
+        return new Date(year, month, day);
+    }
+
+    function formatDate(d) {
+        return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+    }
+
+    // === ИСПРАВЛЕНИЕ 3: переписанный парсер ===
     function parseScheduleJson(json) {
         var out = {};
         if (!json || !json.items) return out;
-        
-        var activeWeekType = null; // "Верхняя", "Нижняя" или null
-        
-        // Проходим по всем парам
+
         for (var i = 0; i < json.items.length; i++) {
             var item = json.items[i];
             if (!item.dates) continue;
-            
-            // Определяем тип недели, если он есть
-            if (item.week === 'Верхняя' || item.week === 'Нижняя') {
-                activeWeekType = item.week;
-            }
-            
-            // Парсим даты: "07.09.26, 14.09.26" или "21.09.26 - 12.10.26"
-            var dates = item.dates.split(',').map(function(s) { return s.trim(); });
-            for (var j = 0; j < dates.length; j++) {
-                var dateStr = dates[j];
-                var dateRange = dateStr.split('-');
-                
-                var datesList = [];
-                if (dateRange.length === 2) {
-                    // Диапазон дат
-                    var start = parseDateShort(dateRange[0].trim());
-                    var end = parseDateShort(dateRange[1].trim());
+
+            var slot = normalizeSlot(item.slot);
+            if (!slot) continue;
+
+            var parts = item.dates.split(',');
+            var datesList = [];
+
+            for (var j = 0; j < parts.length; j++) {
+                var part = parts[j].trim();
+                if (!part) continue;
+
+                // Диапазон: поддерживаем "-", "–", "—"
+                var rangeMatch = part.split(/\s*[-–—]\s*/);
+
+                if (rangeMatch.length === 2) {
+                    var start = parseDateShort(rangeMatch[0]);
+                    var end = parseDateShort(rangeMatch[1]);
                     if (start && end) {
                         var curr = new Date(start);
                         while (curr <= end) {
-                            // Проверяем день недели (только пн-сб)
-                            if (curr.getDay() !== 0) {
-                                // Проверяем чередование, если есть тип недели
-                                if (!activeWeekType || isWeekMatch(curr, activeWeekType, item.week)) {
-                                    datesList.push(formatDate(curr));
-                                }
+                            if (curr.getDay() !== 0) { // без воскресенья
+                                datesList.push(formatDate(curr));
                             }
                             curr.setDate(curr.getDate() + 1);
                         }
                     }
                 } else {
-                    // Одиночная дата
-                    var d = parseDateShort(dateStr);
+                    var d = parseDateShort(part);
                     if (d && d.getDay() !== 0) {
-                        if (!activeWeekType || isWeekMatch(d, activeWeekType, item.week)) {
-                            datesList.push(formatDate(d));
-                        }
+                        datesList.push(formatDate(d));
                     }
                 }
-                
-                // Добавляем пары в расписание
-                for (var k = 0; k < datesList.length; k++) {
-                    var date = datesList[k];
-                    if (!out[date]) out[date] = {};
-                    if (!out[date][item.slot]) out[date][item.slot] = [];
-                    
-                    // Формируем аудиторию и корпус
-                    var location = "";
-                    if (item.isDistance) {
-                        location = "Дистанционно";
-                    } else {
-                        var parts = [];
-                        if (item.aud) parts.push(item.aud);
-                        if (item.building) parts.push(item.building);
-                        location = parts.join(', ');
+            }
+
+            for (var k = 0; k < datesList.length; k++) {
+                var date = datesList[k];
+                if (!out[date]) out[date] = {};
+                if (!out[date][slot]) out[date][slot] = [];
+
+                var location = "";
+                if (item.isDistance) {
+                    location = "Дистанционно";
+                } else {
+                    var locParts = [];
+                    if (item.aud) locParts.push(item.aud);
+                    if (item.building) locParts.push(item.building);
+                    location = locParts.join(', ');
+                }
+
+                var exists = false;
+                for (var m = 0; m < out[date][slot].length; m++) {
+                    if (out[date][slot][m].name === item.name &&
+                        out[date][slot][m].teacher === item.teacher &&
+                        out[date][slot][m].type === item.type) {
+                        exists = true;
+                        break;
                     }
-                    
-                    // Проверяем, нет ли уже такой пары (дубликаты)
-                    var exists = false;
-                    for (var m = 0; m < out[date][item.slot].length; m++) {
-                        if (out[date][item.slot][m].name === item.name && out[date][item.slot][m].teacher === item.teacher) {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    
-                    if (!exists) {
-                        out[date][item.slot].push({
-                            id: item.id,
-                            name: item.name,
-                            type: item.type,
-                            teacher: item.teacher,
-                            room: location,
-                            building: "",
-                            is_distance: item.isDistance,
-                            is_lunch: false,
-                            dates: item.dates
-                        });
-                    }
+                }
+
+                if (!exists) {
+                    out[date][slot].push({
+                        id: item.id,
+                        name: item.name,
+                        type: item.type,
+                        teacher: item.teacher,
+                        room: location,
+                        building: "",
+                        is_distance: item.isDistance,
+                        is_lunch: false,
+                        dates: item.dates
+                    });
                 }
             }
         }
         return out;
     }
-    
-    // Вспомогательные функции для парсинга дат
-    function parseDateShort(str) {
-        // Формат: "07.09.26" или "07.09.2026"
-        var parts = str.split('.');
-        if (parts.length < 3) return null;
-        var day = parseInt(parts[0]);
-        var month = parseInt(parts[1]) - 1;
-        var year = parseInt(parts[2]);
-        if (year < 100) year += 2000;
-        return new Date(year, month, day);
-    }
-    
-    function formatDate(d) {
-        return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
-    }
-    
-    function isWeekMatch(date, activeWeekType, itemWeek) {
-        // Если у пары явно указана неделя, проверяем её
-        if (itemWeek === 'Верхняя' || itemWeek === 'Нижняя') {
-            return getWeekType(date) === itemWeek;
-        }
-        // Если тип недели не указан у пары, значит она каждую неделю
-        if (!itemWeek) return true;
-        return true;
-    }
-    
-    function getWeekType(date) {
-        // Простая логика: четные недели - Нижняя, нечетные - Верхняя
-        // (зависит от семестра, нужно уточнить)
-        var start = new Date(date.getFullYear(), 0, 1);
-        var days = Math.floor((date - start) / (24 * 60 * 60 * 1000));
-        var weekNumber = Math.ceil((date.getDay() + 1 + days) / 7);
-        return (weekNumber % 2 === 0) ? 'Нижняя' : 'Верхняя';
-    }
-    
+
     // Получение расписания с GitHub
     async function loadSchedule() {
         var groupName = localStorage.getItem('groupName') || '';
@@ -537,84 +514,81 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             setUpdateStatus('Укажите группу в настройках', true);
             return;
         }
-        
+
         var versionUrl = GITHUB_BASE_URL + '/' + encodeURIComponent(groupName) + '/version.json';
         var scheduleUrl = GITHUB_BASE_URL + '/' + encodeURIComponent(groupName) + '/schedule.json';
-        
+
         try {
             setUpdateStatus('Проверка версии...');
             var versionResp = await fetch(versionUrl + '?t=' + Date.now());
             if (!versionResp.ok) throw new Error('Файл версии не найден');
             var versionData = await versionResp.json();
-            
+
             var localVersion = localStorage.getItem('scheduleVersion');
             document.getElementById('currentVersion').textContent = formatVersion(versionData.updatedAt);
             document.getElementById('lastCheckDisplay').textContent = formatTimestamp(Date.now());
-            
+
             if (versionData.updatedAt === localVersion) {
                 setUpdateStatus('Обновлений нет');
-                // Загружаем из кеша
                 var cached = localStorage.getItem('scheduleData');
                 if (cached) scheduleData = JSON.parse(cached);
                 renderAll();
                 return;
             }
-            
+
             setUpdateStatus('Загрузка расписания...');
             var scheduleResp = await fetch(scheduleUrl + '?t=' + Date.now());
             if (!scheduleResp.ok) throw new Error('JSON не найден');
             var rawJson = await scheduleResp.json();
-            
+
             var parsed = parseScheduleJson(rawJson);
             scheduleData = parsed;
-            
+
             localStorage.setItem('scheduleData', JSON.stringify(parsed));
             localStorage.setItem('scheduleVersion', versionData.updatedAt);
-            
+
             setUpdateStatus('Расписание обновлено!');
             renderAll();
-            
-            // Показываем уведомление об обновлении
+
             alert('Расписание для группы ' + groupName + ' обновлено!');
-            
+
         } catch(e) {
             setUpdateStatus('Ошибка: ' + e.message, true);
-            // Пытаемся загрузить из кеша
             var cached = localStorage.getItem('scheduleData');
             if (cached) scheduleData = JSON.parse(cached);
             renderAll();
         }
     }
-    
+
     // Запуск проверки каждый час
     setInterval(function() {
         if (localStorage.getItem('groupName')) {
             loadSchedule();
         }
     }, CHECK_INTERVAL_MS);
-    
+
     // Инициализация
     var checkins = {};
     var notes = {};
     try { checkins = JSON.parse(localStorage.getItem('lessonCheckins') || '{}'); } catch(e) {}
     try { notes = JSON.parse(localStorage.getItem('lessonNotes') || '{}'); } catch(e) {}
-    
+
     var isDarkMode = localStorage.getItem('darkMode') === 'true';
     var showCheckins = localStorage.getItem('showCheckins') !== 'false';
     var showProductivity = localStorage.getItem('showProductivity') !== 'false';
-    
+
     var selectedDate = new Date();
     var currentMonthView = selectedDate.getMonth();
     var currentYearView = selectedDate.getFullYear();
     var calendarOpen = false;
     var currentLessonId = null;
     var currentTab = 'schedule';
-    
-    function parseDateStr(str) { var p = str.split('.'); return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0])); }
+
+    function parseDateStr(str) { var p = str.split('.'); return new Date(parseInt(p[2],10), parseInt(p[1],10) - 1, parseInt(p[0],10)); }
     function isToday(d) { var t = new Date(); return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear(); }
     function isSameDay(d1, d2) { return d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear(); }
     function getMonday(d) { var date = new Date(d); var day = date.getDay(); var diff = (day === 0) ? 6 : (day - 1); date.setDate(date.getDate() - diff); date.setHours(0,0,0,0); return date; }
-    
+
     function getDayLessons(dateStr) {
         var dayData = scheduleData[dateStr] || {};
         var lessons = [];
@@ -630,14 +604,14 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         }
         return lessons;
     }
-    
+
     function getTypeClass(type) {
         if (type === 'Лекция') return 'lecture';
         if (type === 'Практика') return 'practice';
         if (type === 'Лабораторная') return 'lab';
         return 'lecture';
     }
-    
+
     function parseTimeRange(slot) {
         var parts = slot.split('-');
         var start = parts[0].trim().replace('.', ':');
@@ -667,9 +641,9 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         if (cur > r.end) return 1;
         return (cur - r.start) / (r.end - r.start);
     }
-    
+
     function hasNotesOnDate(dateStr) { for (var id in notes) { if (id.indexOf(dateStr) === 0) return true; } return false; }
-    
+
     function findNextLessonDay(fromDate) {
         var d = new Date(fromDate); d.setDate(d.getDate() + 1);
         for (var i = 0; i < 60; i++) {
@@ -681,7 +655,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         }
         return null;
     }
-    
+
     function renderCalendar() {
         var grid = document.getElementById('calendarGrid');
         if (!grid) return;
@@ -729,7 +703,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             })(cells[i]);
         }
     }
-    
+
     function toggleCalendar() {
         calendarOpen = !calendarOpen;
         var btn = document.getElementById('calendarToggleBtn');
@@ -737,7 +711,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         if (calendarOpen) { btn.classList.add('open'); panel.classList.add('open'); renderCalendar(); }
         else { btn.classList.remove('open'); panel.classList.remove('open'); }
     }
-    
+
     function renderDaysCarousel() {
         var scroll = document.getElementById('daysScroll');
         if (!scroll) return;
@@ -772,13 +746,13 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             })(chips[i]);
         }
     }
-    
+
     function renderSchedule() {
         var dateStr = formatDate(selectedDate);
         var lessons = getDayLessons(dateStr);
         var list = document.getElementById('scheduleList');
         if (!list) return;
-        
+
         if (lessons.length === 0) {
             var nextLesson = findNextLessonDay(selectedDate);
             var nextText = 'Занятий в этот день нет.';
@@ -803,7 +777,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             document.getElementById('summaryText').textContent = 'Занятий нет';
             return;
         }
-        
+
         var lectureCount = 0, practiceCount = 0, labCount = 0;
         for (var i = 0; i < lessons.length; i++) {
             if (lessons[i].type === 'Лекция') lectureCount++;
@@ -815,7 +789,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         if (practiceCount > 0) parts.push('Практик ' + practiceCount);
         if (labCount > 0) parts.push('Лаб ' + labCount);
         document.getElementById('summaryText').textContent = parts.join(' · ') || 'Занятий нет';
-        
+
         var html = '';
         for (var i = 0; i < lessons.length; i++) {
             var lesson = lessons[i];
@@ -826,11 +800,11 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             var progress = getLessonProgress(lesson.time_slot, dateStr);
             var startStr = lesson.time_slot.split('-')[0].trim();
             var endStr = lesson.time_slot.split('-')[1].trim();
-            
+
             var lineProgressHeight = 0;
             var progressDotHtml = '';
             var lineClass = 'timeline-line ' + typeClass;
-            
+
             if (isActive) {
                 lineProgressHeight = Math.round(progress * 100);
                 var dotTop = Math.round(progress * 100);
@@ -838,19 +812,19 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             } else if (isPassed) {
                 lineClass = 'timeline-line passed ' + typeClass;
             }
-            
+
             var lineProgressHtml = lineProgressHeight > 0 ? '<div class="line-progress" style="height: ' + lineProgressHeight + '%;"></div>' : '';
-            
+
             var typeBadge = lesson.type ? '<span class="type-badge ' + typeClass + '">' + lesson.type + '</span>' : '';
             var isDistance = lesson.is_distance;
             var distanceIcon = isDistance ? '<i class="fas fa-wifi" style="color:var(--rggmu-blue);"></i> ' : '';
             var progressBarHtml = isActive ? '<div class="card-progress"><div class="progress-fill" style="width: ' + Math.round(progress * 100) + '%;"></div></div>' : '';
-            
+
             var roomDisplay = lesson.room || '';
-            
+
             var hasNote = !!notes[lesson.id];
             var noteIndicator = hasNote ? '<i class="fas fa-sticky-note card-note-indicator"></i>' : '';
-            
+
             var isChecked = !!checkins[lesson.id];
             var actionsHtml = '';
             if (showCheckins) {
@@ -861,13 +835,13 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             if (showProductivity) {
                 actionsHtml += '<button class="action-btn note" data-action="note" data-id="' + lesson.id + '"><i class="fas fa-pen"></i> ' + (hasNote ? 'Изменить' : 'Заметка') + '</button>';
             }
-            
+
             var noteTextHtml = '';
             if (hasNote && showProductivity) {
                 var txt = notes[lesson.id].length > 50 ? notes[lesson.id].substring(0, 50) + '...' : notes[lesson.id];
                 noteTextHtml = '<div class="card-note-text"><span><i class="fas fa-sticky-note"></i> ' + txt + '</span><button class="delete-note-btn" data-delete="' + lesson.id + '">Удалить</button></div>';
             }
-            
+
             html += '<div class="lesson-row">' +
                 '<div class="lesson-timeline">' +
                 '<div class="pair-number ' + typeClass + '">' + pairIndex + '</div>' +
@@ -887,7 +861,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         }
         html += '<div style="height: 40px;"></div>';
         list.innerHTML = html;
-        
+
         var cards = list.querySelectorAll('.lesson-card');
         for (var i = 0; i < cards.length; i++) {
             (function(card) {
@@ -897,7 +871,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
                 });
             })(cards[i]);
         }
-        
+
         var checkinBtns = list.querySelectorAll('.action-btn[data-action="checkin"]');
         for (var i = 0; i < checkinBtns.length; i++) {
             (function(btn) {
@@ -907,7 +881,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
                 });
             })(checkinBtns[i]);
         }
-        
+
         var noteBtns = list.querySelectorAll('.action-btn[data-action="note"]');
         for (var i = 0; i < noteBtns.length; i++) {
             (function(btn) {
@@ -917,7 +891,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
                 });
             })(noteBtns[i]);
         }
-        
+
         var delBtns = list.querySelectorAll('.delete-note-btn');
         for (var i = 0; i < delBtns.length; i++) {
             (function(btn) {
@@ -928,14 +902,14 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             })(delBtns[i]);
         }
     }
-    
+
     function toggleCheckin(lessonId) {
         if (checkins[lessonId]) delete checkins[lessonId];
         else checkins[lessonId] = { id: lessonId, date: new Date().toISOString() };
         localStorage.setItem('lessonCheckins', JSON.stringify(checkins));
         renderSchedule();
     }
-    
+
     function openNoteModal(lessonId) {
         currentLessonId = lessonId;
         document.getElementById('noteText').value = notes[lessonId] || '';
@@ -957,7 +931,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         renderAll();
     }
     window.saveNote = saveNote;
-    
+
     var pendingDeleteId = null;
     function showConfirm(lessonId) {
         pendingDeleteId = lessonId;
@@ -978,7 +952,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
     }
     window.closeConfirm = closeConfirm;
     window.confirmAction = confirmAction;
-    
+
     function updateStats() {
         var stats = {};
         for (var dateStr in scheduleData) {
@@ -1022,7 +996,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             }
         }, 100);
     }
-    
+
     function updateTodayFab() {
         var fab = document.getElementById('todayBtn');
         if (!fab) return;
@@ -1030,7 +1004,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         if (isToday(selectedDate)) fab.classList.add('hidden');
         else fab.classList.remove('hidden');
     }
-    
+
     function switchTab(tab) {
         currentTab = tab;
         var scheduleEl = document.getElementById('appContainer');
@@ -1046,7 +1020,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         else if (tab === 'settings') menuItems[2].classList.add('active');
         updateTodayFab();
     }
-    
+
     function initMenu() {
         var menuBtn = document.getElementById('menuBtn');
         var sideMenu = document.getElementById('sideMenu');
@@ -1064,21 +1038,21 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             })(items[i]);
         }
     }
-    
+
     function applyDarkMode() {
         if (isDarkMode) document.body.classList.add('dark');
         else document.body.classList.remove('dark');
         var t = document.getElementById('darkModeToggle');
         if (t) t.checked = isDarkMode;
     }
-    
+
     function renderAll() {
         renderDaysCarousel();
         renderSchedule();
         if (calendarOpen) renderCalendar();
         updateTodayFab();
     }
-    
+
     function changeDay(delta) {
         var d = new Date(selectedDate);
         d.setDate(d.getDate() + delta);
@@ -1088,7 +1062,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         currentYearView = d.getFullYear();
         renderAll();
     }
-    
+
     function changeWeek(delta) {
         var d = new Date(selectedDate);
         d.setDate(d.getDate() + delta * 7);
@@ -1097,14 +1071,14 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         currentYearView = d.getFullYear();
         renderAll();
     }
-    
+
     function goToToday() {
         selectedDate = new Date();
         currentMonthView = selectedDate.getMonth();
         currentYearView = selectedDate.getFullYear();
         renderAll();
     }
-    
+
     function setupScheduleSwipe() {
         var wrapper = document.getElementById('scheduleListWrapper');
         if (!wrapper) return;
@@ -1119,7 +1093,7 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             }
         }, { passive: true });
     }
-    
+
     function setupCalendarSwipe() {
         var panel = document.getElementById('calendarPanel');
         if (!panel) return;
@@ -1135,74 +1109,73 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
             } else if (dy > 60) { if (calendarOpen) toggleCalendar(); }
         }, { passive: true });
     }
-    
+
     function safeAddListener(id, event, handler) {
         var el = document.getElementById(id);
         if (el) el.addEventListener(event, handler);
     }
-    
+
     async function init() {
         try {
             applyDarkMode();
             initMenu();
-            
-            // Восстанавливаем название группы
+
             var savedGroup = localStorage.getItem('groupName') || '';
             document.getElementById('groupNameInput').value = savedGroup;
-            
+
             safeAddListener('calendarToggleBtn', 'click', toggleCalendar);
             safeAddListener('todayBtn', 'click', goToToday);
             safeAddListener('prevMonthBtn', 'click', function() { currentMonthView--; if (currentMonthView < 0) { currentMonthView = 11; currentYearView--; } renderCalendar(); });
             safeAddListener('nextMonthBtn', 'click', function() { currentMonthView++; if (currentMonthView > 11) { currentMonthView = 0; currentYearView++; } renderCalendar(); });
             safeAddListener('prevWeekBtn', 'click', function() { changeWeek(-1); });
             safeAddListener('nextWeekBtn', 'click', function() { changeWeek(1); });
-            
+
             safeAddListener('darkModeToggle', 'change', function(e) { isDarkMode = e.target.checked; localStorage.setItem('darkMode', isDarkMode); applyDarkMode(); });
             safeAddListener('showCheckinsToggle', 'change', function(e) { showCheckins = e.target.checked; localStorage.setItem('showCheckins', showCheckins); renderAll(); });
             safeAddListener('showProductivityToggle', 'change', function(e) { showProductivity = e.target.checked; localStorage.setItem('showProductivity', showProductivity); renderAll(); });
-            
-            // Обработчик кнопки сохранения группы
+
             safeAddListener('saveGroupBtn', 'click', function() {
                 var name = document.getElementById('groupNameInput').value.trim();
                 if (name) {
                     localStorage.setItem('groupName', name);
-                    localStorage.removeItem('scheduleVersion'); // Сбрасываем версию, чтобы принудительно загрузить
+                    localStorage.removeItem('scheduleVersion');
                     loadSchedule();
                 } else {
                     alert('Введите название группы');
                 }
             });
-            
+
             safeAddListener('forceUpdateBtn', 'click', async function() {
                 var btn = document.getElementById('forceUpdateBtn');
                 if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...'; }
+                // Сбрасываем кэш, чтобы гарантированно перечитать JSON
+                localStorage.removeItem('scheduleVersion');
                 await loadSchedule();
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Проверить обновления'; }
             });
-            
+
             safeAddListener('noteModal', 'click', function(e) { if (e.target === this) closeNoteModal(); });
             safeAddListener('confirmOverlay', 'click', function(e) { if (e.target === this) closeConfirm(); });
-            
+
             setupScheduleSwipe();
             setupCalendarSwipe();
-            
-            // Если группа уже сохранена, загружаем расписание
+
             if (savedGroup) {
                 await loadSchedule();
             } else {
                 renderAll();
                 setUpdateStatus('Укажите группу в настройках', true);
             }
-            
+
             setInterval(function() { if (currentTab === 'schedule') renderSchedule(); }, 30000);
-            
+
         } catch(err) {
             console.error('Init error:', err);
             var list = document.getElementById('scheduleList');
             if (list) list.innerHTML = '<div style="padding:40px;text-align:center;color:#e74c3c;">Ошибка: ' + err.message + '</div>';
         }
     }
-    
+
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
 })();
