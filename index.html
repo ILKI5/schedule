@@ -325,8 +325,6 @@ function setUpdateStatus(text, isError) {
     if (el) { el.textContent = text; el.style.color = isError ? '#e74c3c' : '#888'; }
 }
 
-// Извлекает "09.00-10.35" из любой строки вида:
-// "09.00-10.35 перерыв 09.45-09.50", "09.00-10.35 ++", "09:00–10:35 (доп.)"
 function normalizeSlot(slot) {
     if (!slot) return '';
     var s = String(slot);
@@ -351,6 +349,24 @@ function formatDateUTC(d) {
 }
 function formatDateLocal(d) {
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+}
+
+// === Определение недели (Верхняя/Нижняя) ===
+function getWeekType(date) {
+    var d = new Date(date.getTime());
+    var year = d.getFullYear();
+    var month = d.getMonth();
+    
+    // Если месяц до августа (январь-июль), учебный год начался в прошлом году
+    if (month < 7) year -= 1;
+    
+    var startOfYear = new Date(Date.UTC(year, 8, 1)); // 1 сентября текущего учебного года
+    var diffTime = d.getTime() - startOfYear.getTime();
+    var diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    var weekNum = Math.floor(diffDays / 7) + 1;
+    
+    // Если нечетная неделя - Верхняя, четная - Нижняя
+    return (weekNum % 2 !== 0) ? 'Верхняя' : 'Нижняя';
 }
 
 function datesForItem(item) {
@@ -421,6 +437,7 @@ function parseScheduleJson(json) {
                     room: location,
                     is_distance: item.isDistance,
                     subgroup: item.subgroup || '',
+                    week: item.week || '', // сохраняем неделю
                     dates: item.dates,
                     day: item.day || ''
                 });
@@ -445,10 +462,12 @@ function getDayLessons(dateStr) {
     var chosen = getSelectedSubgroup();
     var lessons = [];
     
-    // Парсим день недели самой даты для жесткой проверки
     var p = dateStr.split('.');
     var dObj = new Date(Date.UTC(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10)));
     var ruDayOfDate = weekdayRu[dObj.getUTCDay()].toLowerCase();
+    
+    // Определяем, какая неделя идет на эту дату
+    var weekTypeOfDate = getWeekType(dObj);
 
     var slotKeys = Object.keys(dayData);
     for (var i = 0; i < slotKeys.length; i++) {
@@ -459,10 +478,13 @@ function getDayLessons(dateStr) {
         for (var j = 0; j < arr.length; j++) {
             var l = arr[j];
             
-            // Жесткая проверка: если в JSON был указан день, он должен совпадать
             if (l.day && l.day.toLowerCase() !== ruDayOfDate) continue;
             
-            // Фильтр подгрупп
+            // Жёсткая проверка по неделе (Верхняя/Нижняя)
+            if (l.week) {
+                if (l.week.toLowerCase() !== weekTypeOfDate.toLowerCase()) continue;
+            }
+            
             if (chosen && l.subgroup && l.subgroup !== chosen) continue;
             
             var copy = {};
@@ -472,7 +494,6 @@ function getDayLessons(dateStr) {
         }
     }
     
-    // Сортируем пары по времени начала
     lessons.sort(function(a, b) {
         return parseTimeRange(a.time_slot).start - parseTimeRange(b.time_slot).start;
     });
@@ -707,7 +728,14 @@ function renderSchedule() {
     if (lectureCount > 0) parts.push('Лекций ' + lectureCount);
     if (practiceCount > 0) parts.push('Практик ' + practiceCount);
     if (labCount > 0) parts.push('Лаб ' + labCount);
-    document.getElementById('summaryText').textContent = parts.join(' · ') || 'Занятий нет';
+    
+    // Добавляем информацию о неделе
+    var pObj = dateStr.split('.');
+    var currentDateObj = new Date(Date.UTC(+pObj[2], +pObj[1]-1, +pObj[0]));
+    var weekStr = getWeekType(currentDateObj);
+    parts.push('<span style="color:var(--rggmu-blue);">• ' + weekStr + ' нед.</span>');
+
+    document.getElementById('summaryText').innerHTML = parts.join(' · ');
 
     var html = '';
     for (var i = 0; i < lessons.length; i++) {
