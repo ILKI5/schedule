@@ -304,9 +304,7 @@ var GITHUB_BASE_URL = "https://ilki5.github.io/schedule";
 var CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 var scheduleData = {};
-var timeSlots = ["09.00-10.35", "10.45-12.20", "13.00-14.35", "14.45-16.20", "16.30-18.05"];
 var weekdayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-// Согласовано с getUTCDay(): 0=Вс, 1=Пн, ..., 6=Сб
 var weekdayRu = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 
 function formatVersion(iso) {
@@ -327,13 +325,18 @@ function setUpdateStatus(text, isError) {
     if (el) { el.textContent = text; el.style.color = isError ? '#e74c3c' : '#888'; }
 }
 
-// "09.00-10.35 перерыв 09.45-09.50" -> "09.00-10.35"
+// Извлекает "09.00-10.35" из любой строки вида:
+// "09.00-10.35 перерыв 09.45-09.50", "09.00-10.35 ++", "09:00–10:35 (доп.)"
 function normalizeSlot(slot) {
     if (!slot) return '';
-    return String(slot).split(' перерыв')[0].trim();
+    var s = String(slot);
+    var m = s.match(/(\d{1,2}[.:]\d{2})\s*[-–—]\s*(\d{1,2}[.:]\d{2})/);
+    if (!m) return ''; 
+    var start = m[1].replace(':', '.');
+    var end   = m[2].replace(':', '.');
+    return start + '-' + end;
 }
 
-// Парсит "07.09.26" в Date (UTC, чтобы не зависеть от таймзоны)
 function parseDateShort(str) {
     if (!str) return null;
     var p = String(str).trim().split('.');
@@ -341,7 +344,6 @@ function parseDateShort(str) {
     var d = parseInt(p[0],10), m = parseInt(p[1],10) - 1, y = parseInt(p[2],10);
     if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
     if (y < 100) y += 2000;
-    // используем Date.UTC, чтобы getUTCDay() был стабильным
     return new Date(Date.UTC(y, m, d));
 }
 function formatDateUTC(d) {
@@ -351,9 +353,6 @@ function formatDateLocal(d) {
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
 }
 
-// ЖЁСТКИЙ ФИЛЬТР: пара попадает на дату, только если
-//  1) день недели даты совпадает с item.day
-//  2) дата попадает в диапазон/список item.dates
 function datesForItem(item) {
     if (!item.dates) return [];
     var targetDay = item.day ? item.day.trim().toLowerCase() : null;
@@ -363,11 +362,8 @@ function datesForItem(item) {
     for (var j = 0; j < parts.length; j++) {
         var part = parts[j].trim();
         if (!part) continue;
-
-        // поддержка -, –, —
         var rm = part.split(/\s*[-–—]\s*/);
         var candidates = [];
-
         if (rm.length === 2) {
             var s = parseDateShort(rm[0]), e = parseDateShort(rm[1]);
             if (s && e) {
@@ -381,20 +377,17 @@ function datesForItem(item) {
             var d = parseDateShort(part);
             if (d) candidates.push(d);
         }
-
         for (var k = 0; k < candidates.length; k++) {
             var dd = candidates[k];
-            var dow = dd.getUTCDay(); // 0=Вс, 1=Пн, ...
-            if (dow === 0) continue; // воскресенье — пар нет
+            var dow = dd.getUTCDay(); 
+            if (dow === 0) continue; 
             if (targetDay) {
                 var ruDay = weekdayRu[dow].toLowerCase();
-                if (ruDay !== targetDay) continue; // ЖЁСТКАЯ ПРОВЕРКА ДНЯ НЕДЕЛИ
+                if (ruDay !== targetDay) continue; 
             }
             result.push(formatDateUTC(dd));
         }
     }
-
-    // уникальные
     var seen = {}, uniq = [];
     for (var i = 0; i < result.length; i++) {
         if (!seen[result[i]]) { seen[result[i]] = true; uniq.push(result[i]); }
@@ -428,7 +421,8 @@ function parseScheduleJson(json) {
                     room: location,
                     is_distance: item.isDistance,
                     subgroup: item.subgroup || '',
-                    dates: item.dates
+                    dates: item.dates,
+                    day: item.day || ''
                 });
             }
         }
@@ -438,26 +432,51 @@ function parseScheduleJson(json) {
 
 function getSelectedSubgroup() { return localStorage.getItem('selectedSubgroup') || ''; }
 
+function parseTimeRange(slot) {
+    var m = String(slot).match(/(\d{1,2})[.:](\d{2})\s*[-–—]\s*(\d{1,2})[.:](\d{2})/);
+    if (!m) return { start: 0, end: 0 };
+    var sh = parseInt(m[1], 10), sm = parseInt(m[2], 10);
+    var eh = parseInt(m[3], 10), em = parseInt(m[4], 10);
+    return { start: sh * 60 + sm, end: eh * 60 + em };
+}
+
 function getDayLessons(dateStr) {
     var dayData = scheduleData[dateStr] || {};
     var chosen = getSelectedSubgroup();
     var lessons = [];
-    for (var i = 0; i < timeSlots.length; i++) {
-        var slot = timeSlots[i];
-        if (dayData[slot]) {
-            for (var j = 0; j < dayData[slot].length; j++) {
-                var l = dayData[slot][j];
-                // жёсткий фильтр по подгруппе:
-                // - если выбрана конкретная подгруппа, показываем пары этой подгруппы и пары без подгруппы
-                // - если выбрано «обе», показываем всё
-                if (chosen) {
-                    if (l.subgroup && l.subgroup !== chosen) continue;
-                }
-                l.time_slot = slot;
-                lessons.push(l);
-            }
+    
+    // Парсим день недели самой даты для жесткой проверки
+    var p = dateStr.split('.');
+    var dObj = new Date(Date.UTC(parseInt(p[2],10), parseInt(p[1],10)-1, parseInt(p[0],10)));
+    var ruDayOfDate = weekdayRu[dObj.getUTCDay()].toLowerCase();
+
+    var slotKeys = Object.keys(dayData);
+    for (var i = 0; i < slotKeys.length; i++) {
+        var slot = slotKeys[i];
+        var arr = dayData[slot];
+        if (!arr) continue;
+        
+        for (var j = 0; j < arr.length; j++) {
+            var l = arr[j];
+            
+            // Жесткая проверка: если в JSON был указан день, он должен совпадать
+            if (l.day && l.day.toLowerCase() !== ruDayOfDate) continue;
+            
+            // Фильтр подгрупп
+            if (chosen && l.subgroup && l.subgroup !== chosen) continue;
+            
+            var copy = {};
+            for (var k in l) copy[k] = l[k];
+            copy.time_slot = slot;
+            lessons.push(copy);
         }
     }
+    
+    // Сортируем пары по времени начала
+    lessons.sort(function(a, b) {
+        return parseTimeRange(a.time_slot).start - parseTimeRange(b.time_slot).start;
+    });
+    
     return lessons;
 }
 
@@ -526,14 +545,7 @@ function getTypeClass(type) {
     if (type === 'Лабораторная') return 'lab';
     return 'lecture';
 }
-function parseTimeRange(slot) {
-    var parts = slot.split('-');
-    var start = parts[0].trim().replace('.', ':');
-    var end = parts[1].trim().replace('.', ':');
-    var sp = start.split(':').map(Number);
-    var ep = end.split(':').map(Number);
-    return { start: sp[0]*60+sp[1], end: ep[0]*60+ep[1] };
-}
+
 function getCurrentMinutes() { var now = new Date(); return now.getHours()*60+now.getMinutes(); }
 function isLessonActive(slot, dateStr) {
     if (!isToday(parseDateStr(dateStr))) return false;
@@ -705,8 +717,11 @@ function renderSchedule() {
         var isActive = isLessonActive(lesson.time_slot, dateStr);
         var isPassed = isLessonPassed(lesson.time_slot, dateStr);
         var progress = getLessonProgress(lesson.time_slot, dateStr);
-        var startStr = lesson.time_slot.split('-')[0].trim();
-        var endStr = lesson.time_slot.split('-')[1].trim();
+        
+        var tr = parseTimeRange(lesson.time_slot);
+        var startStr = String(Math.floor(tr.start / 60)).padStart(2, '0') + '.' + String(tr.start % 60).padStart(2, '0');
+        var endStr   = String(Math.floor(tr.end   / 60)).padStart(2, '0') + '.' + String(tr.end   % 60).padStart(2, '0');
+
         var lineProgressHeight = 0;
         var progressDotHtml = '';
         var lineClass = 'timeline-line ' + typeClass;
