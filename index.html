@@ -6,237 +6,214 @@
 <title>Расписание РГГМУ</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-:root {
-    --rggmu-blue: #0066CC;
-    --rggmu-blue-dark: #004A99;
-    --rggmu-light-blue: #4FC3F7;
-    --rggmu-green: #4CAF50;
-    --rggmu-red: #e74c3c;
-    --rggmu-red-dark: #c0392b;
-    --rggmu-red-light: #fdeaea;
-    --rggmu-gray: #B0BEC5;
-    --rggmu-gray-dark: #78909C;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f5f6f8;
-    height: 100%;
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-    color: #1a1a2e;
-}
-.app-container { height: 100%; width: 100%; overflow: hidden; display: flex; flex-direction: column; background: #f5f6f8; }
-.top-bar { padding: 50px 18px 8px 18px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-shrink: 0; }
-.calendar-toggle-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--rggmu-blue); border: none; color: white; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,102,204,0.35); }
-.calendar-toggle-btn i { transition: transform 0.4s ease; }
-.calendar-toggle-btn.open i { transform: rotate(180deg); }
-.today-fab { position: fixed; right: 20px; bottom: 30px; background: var(--rggmu-blue); color: white; border: none; padding: 14px 22px; border-radius: 30px; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 20px rgba(0,102,204,0.45); cursor: pointer; z-index: 200; transition: transform 0.2s; }
-.today-fab:active { transform: scale(0.95); }
-.today-fab i { font-size: 0.95rem; }
-.today-fab.hidden { display: none !important; }
-.calendar-panel { display: none; padding: 0 18px 12px 18px; flex-shrink: 0; }
-.calendar-panel.open { display: block; }
-.calendar-panel .month-header { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 4px 0 8px 0; font-size: 0.9rem; font-weight: 700; }
-.calendar-panel .month-header button { background: none; border: none; color: var(--rggmu-blue); font-size: 0.9rem; cursor: pointer; padding: 4px 8px; }
-.calendar-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
-.calendar-grid .wd-label { font-size: 0.6rem; color: #999; text-align: center; font-weight: 600; padding: 4px 0; text-transform: uppercase; }
-.calendar-grid .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 0.75rem; font-weight: 600; color: #555; background: #eceef1; cursor: pointer; position: relative; border: none; }
-.calendar-grid .cal-day.other-month { color: #ccc; background: transparent; }
-.calendar-grid .cal-day.today { background: var(--rggmu-green); color: white; }
-.calendar-grid .cal-day.selected { background: var(--rggmu-blue); color: white; }
-.calendar-grid .cal-day.has-lesson::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--rggmu-blue); }
-.calendar-grid .cal-day.today.has-lesson::after, .calendar-grid .cal-day.selected.has-lesson::after { background: white; }
-.calendar-grid .cal-day.has-note::before { content: '📝'; position: absolute; top: 1px; right: 1px; font-size: 0.5rem; }
-.days-carousel { padding: 0 12px 14px 12px; display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
-.days-carousel .week-arrow { width: 30px; height: 30px; border: none; background: transparent; color: var(--rggmu-blue); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; transition: background 0.2s; }
-.days-carousel .week-arrow:active { background: rgba(0,102,204,0.15); transform: scale(0.9); }
-.days-carousel .days-scroll { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; flex: 1; }
-.day-chip { padding: 7px 2px; border-radius: 14px; background: #eceef1; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; border: none; position: relative; transition: all 0.25s; min-width: 0; }
-.day-chip.active { background: var(--rggmu-blue); box-shadow: 0 4px 14px rgba(0,102,204,0.4); transform: translateY(-2px); }
-.day-chip .chip-day { font-size: 0.65rem; font-weight: 600; color: #888; }
-.day-chip .chip-date { font-size: 0.68rem; font-weight: 700; color: #555; }
-.day-chip.active .chip-day, .day-chip.active .chip-date { color: white; }
-.day-chip .chip-bars { display: flex; gap: 2px; margin-top: 3px; height: 16px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
-.day-chip .chip-bars .bar { width: 3px; border-radius: 2px; min-height: 4px; }
-.day-chip .chip-bars .bar.lecture { background: var(--rggmu-blue); height: 14px; }
-.day-chip .chip-bars .bar.practice { background: var(--rggmu-green); height: 12px; }
-.day-chip .chip-bars .bar.lab { background: var(--rggmu-red); height: 16px; }
-.day-chip.active .chip-bars .bar { background: rgba(255,255,255,0.9); }
-.day-chip .chip-note { position: absolute; top: 1px; right: 2px; font-size: 0.45rem; }
-.summary-row { padding: 0 18px 10px 18px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.summary-row i { color: var(--rggmu-blue); font-size: 0.85rem; }
-.summary-row .summary-text { font-size: 0.85rem; font-weight: 600; color: #666; }
-.schedule-list-wrapper { flex: 1; overflow-y: auto; padding: 0 18px 110px 18px; -webkit-overflow-scrolling: touch; }
-.schedule-list-wrapper::-webkit-scrollbar { width: 5px; }
-.schedule-list-wrapper::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
-.lesson-row { display: flex; gap: 12px; margin-bottom: 14px; }
-.lesson-timeline { width: 44px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; position: relative; }
-.lesson-timeline .pair-number { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: white; margin-bottom: 6px; flex-shrink: 0; z-index: 2; }
-.lesson-timeline .pair-number.lecture { background: var(--rggmu-blue); }
-.lesson-timeline .pair-number.practice { background: var(--rggmu-green); }
-.lesson-timeline .pair-number.lab { background: var(--rggmu-red); }
-.lesson-timeline .time-start { font-size: 0.7rem; font-weight: 700; margin-bottom: 2px; }
-.timeline-line-wrapper { width: 100%; flex: 1; padding: 10px 0; display: flex; justify-content: center; }
-.timeline-line { width: 3px; height: 100%; background: #e0e0e0; position: relative; border-radius: 2px; min-height: 40px; }
-.timeline-line .line-progress { position: absolute; top: 0; left: 0; right: 0; border-radius: 2px; transition: height 1s linear; }
-.timeline-line.lecture .line-progress { background: var(--rggmu-blue); }
-.timeline-line.practice .line-progress { background: var(--rggmu-green); }
-.timeline-line.lab .line-progress { background: var(--rggmu-red); }
-.timeline-line.passed.lecture { background: var(--rggmu-blue); }
-.timeline-line.passed.practice { background: var(--rggmu-green); }
-.timeline-line.passed.lab { background: var(--rggmu-red); }
-.timeline-progress-dot { position: absolute; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; z-index: 3; transition: top 1s linear; border: 2px solid #fff; }
-.timeline-progress-dot.lecture { background: var(--rggmu-blue); box-shadow: 0 0 0 0 rgba(0,102,204,0.7); animation: pulseDotBlue 1.5s infinite; }
-.timeline-progress-dot.practice { background: var(--rggmu-green); box-shadow: 0 0 0 0 rgba(76,175,80,0.7); animation: pulseDotGreen 1.5s infinite; }
-.timeline-progress-dot.lab { background: var(--rggmu-red); box-shadow: 0 0 0 0 rgba(231,76,60,0.7); animation: pulseDotRed 1.5s infinite; }
-@keyframes pulseDotBlue { 0% { box-shadow: 0 0 0 0 rgba(0,102,204,0.7); } 70% { box-shadow: 0 0 0 12px rgba(0,102,204,0); } 100% { box-shadow: 0 0 0 0 rgba(0,102,204,0); } }
-@keyframes pulseDotGreen { 0% { box-shadow: 0 0 0 0 rgba(76,175,80,0.7); } 70% { box-shadow: 0 0 0 12px rgba(76,175,80,0); } 100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); } }
-@keyframes pulseDotRed { 0% { box-shadow: 0 0 0 0 rgba(231,76,60,0.7); } 70% { box-shadow: 0 0 0 12px rgba(231,76,60,0); } 100% { box-shadow: 0 0 0 0 rgba(231,76,60,0); } }
-.lesson-timeline .time-end { font-size: 0.7rem; font-weight: 700; margin-top: 2px; }
-.lesson-card { flex: 1; border-radius: 16px; padding: 12px 14px; position: relative; cursor: pointer; transition: all 0.2s; }
-.lesson-card.lecture { background: #e6f0fa; border-left: 4px solid var(--rggmu-blue); }
-.lesson-card.practice { background: #e8f5e9; border-left: 4px solid var(--rggmu-green); }
-.lesson-card.lab { background: var(--rggmu-red-light); border-left: 4px solid var(--rggmu-red); }
-.lesson-card:active { transform: scale(0.98); }
-.lesson-card .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-.lesson-card .type-badge { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 3px 10px; border-radius: 8px; background: rgba(255,255,255,0.7); color: #555; }
-.lesson-card .type-badge.lecture { color: var(--rggmu-blue-dark); }
-.lesson-card .type-badge.practice { color: #2E7D32; }
-.lesson-card .type-badge.lab { color: var(--rggmu-red-dark); }
-.lesson-card .card-counter { font-size: 0.7rem; color: #999; font-weight: 500; }
-.lesson-card .card-title { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; line-height: 1.3; margin-bottom: 8px; }
-.lesson-card .card-meta { display: flex; flex-direction: column; gap: 4px; }
-.lesson-card .card-meta .meta-row { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #777; }
-.lesson-card .card-meta .meta-row i { font-size: 0.7rem; color: #aaa; width: 14px; text-align: center; }
-.lesson-card .card-note-indicator { position: absolute; top: 32px; right: 12px; color: var(--rggmu-blue); font-size: 0.9rem; }
-.lesson-card .card-actions { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.06); gap: 8px; flex-wrap: wrap; }
-.lesson-card.expanded .card-actions { display: flex; }
-.action-btn { border: none; color: white; padding: 7px 14px; border-radius: 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
-.action-btn.checkin { background: var(--rggmu-green); }
-.action-btn.checkin.checked { background: #90A4AE; }
-.action-btn.note { background: var(--rggmu-blue); }
-.lesson-card .card-progress { margin-top: 10px; height: 6px; background: rgba(0,0,0,0.06); border-radius: 6px; overflow: hidden; display: none; position: relative; }
-.lesson-card.active-lesson .card-progress { display: block; }
-.lesson-card .card-progress .progress-fill { height: 100%; border-radius: 6px; transition: width 1s linear; position: relative; overflow: hidden; }
-.lesson-card.lecture .card-progress .progress-fill { background: var(--rggmu-blue); }
-.lesson-card.practice .card-progress .progress-fill { background: var(--rggmu-green); }
-.lesson-card.lab .card-progress .progress-fill { background: var(--rggmu-red); }
-.lesson-card .card-progress .progress-fill::after { content: ''; position: absolute; top: 0; left: -40%; width: 40%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 100%); animation: shimmer 1.6s linear infinite; }
-@keyframes shimmer { 0% { left: -40%; } 100% { left: 100%; } }
-.lesson-card .card-note-text { margin-top: 8px; padding: 6px 10px; background: rgba(0,102,204,0.08); border-radius: 8px; font-size: 0.72rem; color: #004A99; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.lesson-card .card-note-text .delete-note-btn { background: #e74c3c; border: none; color: white; padding: 3px 10px; border-radius: 10px; font-size: 0.6rem; cursor: pointer; flex-shrink: 0; }
-.empty-day { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #aaa; text-align: center; }
-.empty-day .empty-icon { width: 80px; height: 80px; border-radius: 24px; background: #e6f0fa; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-.empty-day .empty-icon i { font-size: 2rem; color: var(--rggmu-blue); }
-.empty-day .empty-title { font-size: 1.1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
-.empty-day .empty-text { font-size: 0.85rem; color: #999; line-height: 1.5; max-width: 280px; }
-.empty-day .empty-link { margin-top: 16px; color: var(--rggmu-blue); font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; background: none; }
-.menu-btn { position: fixed; top: 14px; left: 16px; width: 40px; height: 40px; background: var(--rggmu-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; color: white; font-size: 1.1rem; border: none; box-shadow: 0 4px 14px rgba(0,102,204,0.4); }
-.menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; display: none; opacity: 0; transition: opacity 0.3s; }
-.side-menu { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: white; z-index: 1001; transition: left 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: 4px 0 20px rgba(0,0,0,0.1); padding-top: 50px; }
-.side-menu.open { left: 0; }
-.side-menu .menu-header { padding: 16px 20px 12px 20px; border-bottom: 1px solid #eee; font-size: 1.05rem; font-weight: 700; }
-.side-menu .menu-item { padding: 14px 20px; border-bottom: 1px solid #f5f5f5; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #333; font-size: 0.9rem; }
-.side-menu .menu-item i { width: 20px; color: #666; font-size: 0.95rem; }
-.side-menu .menu-item.active { background: var(--rggmu-blue); color: white; }
-.side-menu .menu-item.active i { color: white; }
-.close-menu { position: absolute; top: 12px; right: 16px; font-size: 1.3rem; cursor: pointer; color: #666; border: none; background: none; }
-.fullscreen-tab { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 60px 16px 120px 16px; background: #f5f6f8; z-index: 50; }
-.fullscreen-tab.active { display: block; }
-.stats-card { background: white; border-radius: 16px; margin-bottom: 12px; overflow: hidden; }
-.stats-subject { padding: 12px 16px; background: var(--rggmu-blue-dark); color: white; font-weight: 600; font-size: 0.85rem; }
-.stats-item { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; }
-.stats-item:last-child { border-bottom: none; }
-.stats-label { font-size: 0.8rem; font-weight: 500; color: #333; margin-bottom: 6px; }
-.stats-progress-wrapper { display: flex; align-items: center; gap: 10px; }
-.stats-progress { flex: 1; height: 6px; background: #ecf0f1; border-radius: 10px; overflow: hidden; }
-.stats-bar { height: 100%; background: linear-gradient(90deg, var(--rggmu-blue), var(--rggmu-light-blue)); width: 0%; transition: width 0.6s ease; border-radius: 10px; }
-.stats-percent { font-size: 0.75rem; font-weight: 600; color: var(--rggmu-blue); white-space: nowrap; }
-.settings-card { background: white; border-radius: 16px; margin-bottom: 12px; overflow: hidden; }
-.settings-title { padding: 12px 16px; background: var(--rggmu-blue-dark); color: white; font-weight: 600; font-size: 0.85rem; }
-.settings-item { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-.settings-item:last-child { border-bottom: none; }
-.settings-item strong { font-size: 0.85rem; color: #333; font-weight: 500; }
-.settings-item .settings-value { font-size: 0.78rem; color: var(--rggmu-blue); font-weight: 600; text-align: right; }
-.settings-item input[type="text"] { flex: 1; min-width: 150px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; outline: none; }
-.btn-update { background: var(--rggmu-blue); color: white; border: none; padding: 11px 16px; border-radius: 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
-.btn-update:active { transform: scale(0.97); }
-.btn-update:disabled { background: #90A4AE; cursor: wait; }
-.update-status { font-size: 0.72rem; color: #888; margin-top: 8px; text-align: center; min-height: 16px; }
-.toggle-switch { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 26px; transition: 0.3s; cursor: pointer; }
-.toggle-slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
-input:checked + .toggle-slider { background: var(--rggmu-blue); }
-input:checked + .toggle-slider:before { transform: translateX(22px); }
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
-.modal-content { background: white; border-radius: 20px; padding: 20px; width: 90%; max-width: 360px; }
-.modal-content h3 { margin-bottom: 12px; font-size: 1.1rem; }
-.modal-content textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 12px; font-size: 0.9rem; resize: vertical; font-family: inherit; min-height: 80px; }
-.modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
-.modal-buttons button { padding: 8px 18px; border: none; border-radius: 20px; cursor: pointer; font-weight: 500; font-size: 0.85rem; }
-.modal-buttons button:first-child { background: var(--rggmu-blue); color: white; }
-.modal-buttons button:last-child { background: #eee; color: #666; }
-.confirm-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; }
-.confirm-overlay.active { display: flex; }
-.confirm-box { background: white; border-radius: 20px; padding: 24px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
-.confirm-box .confirm-title { font-size: 1.1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
-.confirm-box .confirm-text { font-size: 0.9rem; color: #666; margin-bottom: 20px; }
-.confirm-box .confirm-buttons { display: flex; gap: 10px; }
-.confirm-box .confirm-buttons button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
-.confirm-box .confirm-buttons .btn-cancel { background: #eee; color: #666; }
-.confirm-box .confirm-buttons .btn-delete { background: #e74c3c; color: white; }
-body.dark .confirm-box { background: #1a1a2e; }
-body.dark .confirm-box .confirm-title { color: #fff; }
-body.dark .confirm-box .confirm-text { color: #aaa; }
-body.dark .confirm-box .confirm-buttons .btn-cancel { background: #2a2a3e; color: #aaa; }
-body.dark { background: #0a0a1a; }
-body.dark .app-container { background: #0a0a1a; }
-body.dark .top-bar, body.dark .days-carousel { background: #0a0a1a; }
-body.dark .day-chip { background: #1a1a2e; }
-body.dark .day-chip .chip-day, body.dark .day-chip .chip-date { color: #666; }
-body.dark .day-chip.active { background: var(--rggmu-blue); }
-body.dark .day-chip.active .chip-day, body.dark .day-chip.active .chip-date { color: #fff; }
-body.dark .summary-row .summary-text { color: #aaa; }
-body.dark .lesson-card { background: #1a1a2e; }
-body.dark .lesson-card.lecture { background: #14243a; }
-body.dark .lesson-card.practice { background: #142a18; }
-body.dark .lesson-card.lab { background: #2e1a1a; }
-body.dark .lesson-card .card-title { color: #fff; }
-body.dark .lesson-card .card-meta .meta-row { color: #aaa; }
-body.dark .lesson-card .type-badge { background: rgba(255,255,255,0.1); }
-body.dark .lesson-timeline .time-start, body.dark .lesson-timeline .time-end { color: #ccc; }
-body.dark .timeline-line { background: #2a2a3e; }
-body.dark .side-menu { background: #1a1a2e; }
-body.dark .side-menu .menu-header { color: #e0e0e0; border-bottom-color: #2c3e50; }
-body.dark .side-menu .menu-item { color: #e0e0e0; border-bottom-color: #2c3e50; }
-body.dark .modal-content { background: #1a1a2e; color: #fff; }
-body.dark .modal-content h3 { color: #fff; }
-body.dark .modal-content textarea { background: #2a2a3e; color: #fff; border-color: #2a2a3e; }
-body.dark .fullscreen-tab { background: #0a0a1a; }
-body.dark .stats-card, body.dark .settings-card { background: #1a1a2e; }
-body.dark .stats-item { border-bottom-color: #2c3e50; }
-body.dark .stats-label { color: #e0e0e0; }
-body.dark .settings-item { border-bottom-color: #2c3e50; }
-body.dark .settings-item strong { color: #e0e0e0; }
-body.dark .calendar-panel { background: #0a0a1a; }
-body.dark .calendar-grid .cal-day { background: #1a1a2e; color: #aaa; }
-body.dark .calendar-grid .cal-day.other-month { background: transparent; color: #444; }
-body.dark .calendar-grid .cal-day.today { background: var(--rggmu-green); color: #fff; }
-body.dark .calendar-grid .cal-day.selected { background: var(--rggmu-blue); color: #fff; }
-body.dark .empty-day .empty-title { color: #fff; }
-body.dark .empty-day .empty-text { color: #666; }
-body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; border-color: #2a2a3e; }
+:root{--rggmu-blue:#0066CC;--rggmu-blue-dark:#004A99;--rggmu-light-blue:#4FC3F7;--rggmu-green:#4CAF50;--rggmu-red:#e74c3c;--rggmu-red-dark:#c0392b;--rggmu-red-light:#fdeaea;--rggmu-gray:#B0BEC5;--rggmu-gray-dark:#78909C}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6f8;height:100%;overflow:hidden;position:fixed;width:100%;color:#1a1a2e}
+.app-container{height:100%;width:100%;overflow:hidden;display:flex;flex-direction:column;background:#f5f6f8}
+.top-bar{padding:50px 18px 8px 18px;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-shrink:0}
+.calendar-toggle-btn{width:40px;height:40px;border-radius:50%;background:var(--rggmu-blue);border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;flex-shrink:0;box-shadow:0 4px 14px rgba(0,102,204,.35)}
+.calendar-toggle-btn i{transition:transform .4s ease}
+.calendar-toggle-btn.open i{transform:rotate(180deg)}
+.today-fab{position:fixed;right:20px;bottom:30px;background:var(--rggmu-blue);color:#fff;border:none;padding:14px 22px;border-radius:30px;font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,102,204,.45);cursor:pointer;z-index:200;transition:transform .2s}
+.today-fab:active{transform:scale(.95)}
+.today-fab.hidden{display:none!important}
+.calendar-panel{display:none;padding:0 18px 12px 18px;flex-shrink:0}
+.calendar-panel.open{display:block}
+.calendar-panel .month-header{display:flex;justify-content:center;align-items:center;gap:8px;padding:4px 0 8px 0;font-size:.9rem;font-weight:700}
+.calendar-panel .month-header button{background:none;border:none;color:var(--rggmu-blue);font-size:.9rem;cursor:pointer;padding:4px 8px}
+.calendar-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.calendar-grid .wd-label{font-size:.6rem;color:#999;text-align:center;font-weight:600;padding:4px 0;text-transform:uppercase}
+.calendar-grid .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:10px;font-size:.75rem;font-weight:600;color:#555;background:#eceef1;cursor:pointer;position:relative;border:none}
+.calendar-grid .cal-day.other-month{color:#ccc;background:transparent}
+.calendar-grid .cal-day.today{background:var(--rggmu-green);color:#fff}
+.calendar-grid .cal-day.selected{background:var(--rggmu-blue);color:#fff}
+.calendar-grid .cal-day.has-lesson::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--rggmu-blue)}
+.calendar-grid .cal-day.today.has-lesson::after,.calendar-grid .cal-day.selected.has-lesson::after{background:#fff}
+.calendar-grid .cal-day.has-note::before{content:'📝';position:absolute;top:1px;right:1px;font-size:.5rem}
+.days-carousel{padding:0 12px 14px 12px;display:flex;gap:6px;flex-shrink:0;align-items:center}
+.days-carousel .week-arrow{width:30px;height:30px;border:none;background:transparent;color:var(--rggmu-blue);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:50%;transition:background .2s}
+.days-carousel .week-arrow:active{background:rgba(0,102,204,.15);transform:scale(.9)}
+.days-carousel .days-scroll{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;flex:1}
+.day-chip{padding:7px 2px;border-radius:14px;background:#eceef1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;position:relative;transition:all .25s;min-width:0}
+.day-chip.active{background:var(--rggmu-blue);box-shadow:0 4px 14px rgba(0,102,204,.4);transform:translateY(-2px)}
+.day-chip .chip-day{font-size:.65rem;font-weight:600;color:#888}
+.day-chip .chip-date{font-size:.68rem;font-weight:700;color:#555}
+.day-chip.active .chip-day,.day-chip.active .chip-date{color:#fff}
+.day-chip .chip-bars{display:flex;gap:2px;margin-top:3px;height:16px;align-items:flex-end;flex-wrap:wrap;justify-content:center}
+.day-chip .chip-bars .bar{width:3px;border-radius:2px;min-height:4px}
+.day-chip .chip-bars .bar.lecture{background:var(--rggmu-blue);height:14px}
+.day-chip .chip-bars .bar.practice{background:var(--rggmu-green);height:12px}
+.day-chip .chip-bars .bar.lab{background:var(--rggmu-red);height:16px}
+.day-chip.active .chip-bars .bar{background:rgba(255,255,255,.9)}
+.day-chip .chip-note{position:absolute;top:1px;right:2px;font-size:.45rem}
+.summary-row{padding:0 18px 10px 18px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.summary-row i{color:var(--rggmu-blue);font-size:.85rem}
+.summary-row .summary-text{font-size:.85rem;font-weight:600;color:#666}
+.schedule-list-wrapper{flex:1;overflow-y:auto;padding:0 18px 110px 18px;-webkit-overflow-scrolling:touch}
+.schedule-list-wrapper::-webkit-scrollbar{width:5px}
+.schedule-list-wrapper::-webkit-scrollbar-thumb{background:#ddd;border-radius:10px}
+.lesson-row{display:flex;gap:12px;margin-bottom:14px}
+.lesson-timeline{width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;position:relative}
+.lesson-timeline .pair-number{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#fff;margin-bottom:6px;flex-shrink:0;z-index:2}
+.lesson-timeline .pair-number.lecture{background:var(--rggmu-blue)}
+.lesson-timeline .pair-number.practice{background:var(--rggmu-green)}
+.lesson-timeline .pair-number.lab{background:var(--rggmu-red)}
+.lesson-timeline .time-start{font-size:.7rem;font-weight:700;margin-bottom:2px}
+.timeline-line-wrapper{width:100%;flex:1;padding:10px 0;display:flex;justify-content:center}
+.timeline-line{width:3px;height:100%;background:#e0e0e0;position:relative;border-radius:2px;min-height:40px}
+.timeline-line .line-progress{position:absolute;top:0;left:0;right:0;border-radius:2px;transition:height 1s linear}
+.timeline-line.lecture .line-progress{background:var(--rggmu-blue)}
+.timeline-line.practice .line-progress{background:var(--rggmu-green)}
+.timeline-line.lab .line-progress{background:var(--rggmu-red)}
+.timeline-line.passed.lecture{background:var(--rggmu-blue)}
+.timeline-line.passed.practice{background:var(--rggmu-green)}
+.timeline-line.passed.lab{background:var(--rggmu-red)}
+.timeline-progress-dot{position:absolute;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;z-index:3;transition:top 1s linear;border:2px solid #fff}
+.timeline-progress-dot.lecture{background:var(--rggmu-blue);box-shadow:0 0 0 0 rgba(0,102,204,.7);animation:pulseDotBlue 1.5s infinite}
+.timeline-progress-dot.practice{background:var(--rggmu-green);box-shadow:0 0 0 0 rgba(76,175,80,.7);animation:pulseDotGreen 1.5s infinite}
+.timeline-progress-dot.lab{background:var(--rggmu-red);box-shadow:0 0 0 0 rgba(231,76,60,.7);animation:pulseDotRed 1.5s infinite}
+@keyframes pulseDotBlue{0%{box-shadow:0 0 0 0 rgba(0,102,204,.7)}70%{box-shadow:0 0 0 12px rgba(0,102,204,0)}100%{box-shadow:0 0 0 0 rgba(0,102,204,0)}}
+@keyframes pulseDotGreen{0%{box-shadow:0 0 0 0 rgba(76,175,80,.7)}70%{box-shadow:0 0 0 12px rgba(76,175,80,0)}100%{box-shadow:0 0 0 0 rgba(76,175,80,0)}}
+@keyframes pulseDotRed{0%{box-shadow:0 0 0 0 rgba(231,76,60,.7)}70%{box-shadow:0 0 0 12px rgba(231,76,60,0)}100%{box-shadow:0 0 0 0 rgba(231,76,60,0)}}
+.lesson-timeline .time-end{font-size:.7rem;font-weight:700;margin-top:2px}
+.lesson-card{flex:1;border-radius:16px;padding:12px 14px;position:relative;cursor:pointer;transition:all .2s}
+.lesson-card.lecture{background:#e6f0fa;border-left:4px solid var(--rggmu-blue)}
+.lesson-card.practice{background:#e8f5e9;border-left:4px solid var(--rggmu-green)}
+.lesson-card.lab{background:var(--rggmu-red-light);border-left:4px solid var(--rggmu-red)}
+.lesson-card:active{transform:scale(.98)}
+.lesson-card .card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.lesson-card .type-badge{display:inline-block;font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,.7);color:#555}
+.lesson-card .type-badge.lecture{color:var(--rggmu-blue-dark)}
+.lesson-card .type-badge.practice{color:#2E7D32}
+.lesson-card .type-badge.lab{color:var(--rggmu-red-dark)}
+.lesson-card .card-title{font-size:.95rem;font-weight:700;color:#1a1a2e;line-height:1.3;margin-bottom:8px}
+.lesson-card .card-meta{display:flex;flex-direction:column;gap:4px}
+.lesson-card .card-meta .meta-row{display:flex;align-items:center;gap:6px;font-size:.78rem;color:#777}
+.lesson-card .card-meta .meta-row i{font-size:.7rem;color:#aaa;width:14px;text-align:center}
+.lesson-card .card-note-indicator{position:absolute;top:32px;right:12px;color:var(--rggmu-blue);font-size:.9rem}
+.lesson-card .card-actions{display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06);gap:8px;flex-wrap:wrap}
+.lesson-card.expanded .card-actions{display:flex}
+.action-btn{border:none;color:#fff;padding:7px 14px;border-radius:12px;font-size:.75rem;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.action-btn.checkin{background:var(--rggmu-green)}
+.action-btn.checkin.checked{background:#90A4AE}
+.action-btn.note{background:var(--rggmu-blue)}
+.lesson-card .card-progress{margin-top:10px;height:6px;background:rgba(0,0,0,.06);border-radius:6px;overflow:hidden;display:none;position:relative}
+.lesson-card.active-lesson .card-progress{display:block}
+.lesson-card .card-progress .progress-fill{height:100%;border-radius:6px;transition:width 1s linear;position:relative;overflow:hidden}
+.lesson-card.lecture .card-progress .progress-fill{background:var(--rggmu-blue)}
+.lesson-card.practice .card-progress .progress-fill{background:var(--rggmu-green)}
+.lesson-card.lab .card-progress .progress-fill{background:var(--rggmu-red)}
+.lesson-card .card-progress .progress-fill::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.75) 50%,rgba(255,255,255,0) 100%);animation:shimmer 1.6s linear infinite}
+@keyframes shimmer{0%{left:-40%}100%{left:100%}}
+.lesson-card .card-note-text{margin-top:8px;padding:6px 10px;background:rgba(0,102,204,.08);border-radius:8px;font-size:.72rem;color:#004A99;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lesson-card .card-note-text .delete-note-btn{background:#e74c3c;border:none;color:#fff;padding:3px 10px;border-radius:10px;font-size:.6rem;cursor:pointer;flex-shrink:0}
+.empty-day{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#aaa;text-align:center}
+.empty-day .empty-icon{width:80px;height:80px;border-radius:24px;background:#e6f0fa;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.empty-day .empty-icon i{font-size:2rem;color:var(--rggmu-blue)}
+.empty-day .empty-title{font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-bottom:6px}
+.empty-day .empty-text{font-size:.85rem;color:#999;line-height:1.5;max-width:280px}
+.empty-day .empty-link{margin-top:16px;color:var(--rggmu-blue);font-weight:600;font-size:.9rem;cursor:pointer;border:none;background:none}
+.menu-btn{position:fixed;top:14px;left:16px;width:40px;height:40px;background:var(--rggmu-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100;color:#fff;font-size:1.1rem;border:none;box-shadow:0 4px 14px rgba(0,102,204,.4)}
+.menu-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1000;display:none;opacity:0;transition:opacity .3s}
+.side-menu{position:fixed;top:0;left:-280px;width:280px;height:100%;background:#fff;z-index:1001;transition:left .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 20px rgba(0,0,0,.1);padding-top:50px}
+.side-menu.open{left:0}
+.side-menu .menu-header{padding:16px 20px 12px 20px;border-bottom:1px solid #eee;font-size:1.05rem;font-weight:700}
+.side-menu .menu-item{padding:14px 20px;border-bottom:1px solid #f5f5f5;cursor:pointer;display:flex;align-items:center;gap:12px;color:#333;font-size:.9rem}
+.side-menu .menu-item i{width:20px;color:#666;font-size:.95rem}
+.side-menu .menu-item.active{background:var(--rggmu-blue);color:#fff}
+.side-menu .menu-item.active i{color:#fff}
+.close-menu{position:absolute;top:12px;right:16px;font-size:1.3rem;cursor:pointer;color:#666;border:none;background:none}
+.fullscreen-tab{display:none;position:fixed;top:0;left:0;right:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:60px 16px 120px 16px;background:#f5f6f8;z-index:50}
+.fullscreen-tab.active{display:block}
+.stats-card{background:#fff;border-radius:16px;margin-bottom:12px;overflow:hidden}
+.stats-subject{padding:12px 16px;background:var(--rggmu-blue-dark);color:#fff;font-weight:600;font-size:.85rem}
+.stats-item{padding:10px 16px;border-bottom:1px solid #f0f0f0}
+.stats-item:last-child{border-bottom:none}
+.stats-label{font-size:.8rem;font-weight:500;color:#333;margin-bottom:6px}
+.stats-progress-wrapper{display:flex;align-items:center;gap:10px}
+.stats-progress{flex:1;height:6px;background:#ecf0f1;border-radius:10px;overflow:hidden}
+.stats-bar{height:100%;background:linear-gradient(90deg,var(--rggmu-blue),var(--rggmu-light-blue));width:0%;transition:width .6s ease;border-radius:10px}
+.stats-percent{font-size:.75rem;font-weight:600;color:var(--rggmu-blue);white-space:nowrap}
+.settings-card{background:#fff;border-radius:16px;margin-bottom:12px;overflow:hidden}
+.settings-title{padding:12px 16px;background:var(--rggmu-blue-dark);color:#fff;font-weight:600;font-size:.85rem}
+.settings-item{padding:12px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.settings-item:last-child{border-bottom:none}
+.settings-item strong{font-size:.85rem;color:#333;font-weight:500}
+.settings-item .settings-value{font-size:.78rem;color:var(--rggmu-blue);font-weight:600;text-align:right}
+.settings-item input[type="text"],.settings-item select{flex:1;min-width:150px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:.9rem;outline:none;background:#fff;color:inherit;font-family:inherit}
+.btn-update{background:var(--rggmu-blue);color:#fff;border:none;padding:11px 16px;border-radius:12px;font-size:.82rem;font-weight:600;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s}
+.btn-update:active{transform:scale(.97)}
+.btn-update:disabled{background:#90A4AE;cursor:wait}
+.update-status{font-size:.72rem;color:#888;margin-top:8px;text-align:center;min-height:16px}
+.toggle-switch{position:relative;width:48px;height:26px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s;cursor:pointer}
+.toggle-slider:before{content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+input:checked+.toggle-slider{background:var(--rggmu-blue)}
+input:checked+.toggle-slider:before{transform:translateX(22px)}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:2000;justify-content:center;align-items:center}
+.modal-content{background:#fff;border-radius:20px;padding:20px;width:90%;max-width:360px}
+.modal-content h3{margin-bottom:12px;font-size:1.1rem}
+.modal-content textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:12px;font-size:.9rem;resize:vertical;font-family:inherit;min-height:80px}
+.modal-buttons{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+.modal-buttons button{padding:8px 18px;border:none;border-radius:20px;cursor:pointer;font-weight:500;font-size:.85rem}
+.modal-buttons button:first-child{background:var(--rggmu-blue);color:#fff}
+.modal-buttons button:last-child{background:#eee;color:#666}
+.confirm-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;justify-content:center;align-items:center}
+.confirm-overlay.active{display:flex}
+.confirm-box{background:#fff;border-radius:20px;padding:24px;width:85%;max-width:320px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.confirm-box .confirm-title{font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-bottom:8px}
+.confirm-box .confirm-text{font-size:.9rem;color:#666;margin-bottom:20px}
+.confirm-box .confirm-buttons{display:flex;gap:10px}
+.confirm-box .confirm-buttons button{flex:1;padding:12px;border:none;border-radius:12px;font-size:.9rem;font-weight:600;cursor:pointer}
+.confirm-box .confirm-buttons .btn-cancel{background:#eee;color:#666}
+.confirm-box .confirm-buttons .btn-delete{background:#e74c3c;color:#fff}
+body.dark{background:#0a0a1a}
+body.dark .confirm-box{background:#1a1a2e}
+body.dark .confirm-box .confirm-title{color:#fff}
+body.dark .confirm-box .confirm-text{color:#aaa}
+body.dark .confirm-box .confirm-buttons .btn-cancel{background:#2a2a3e;color:#aaa}
+body.dark .app-container{background:#0a0a1a}
+body.dark .top-bar,body.dark .days-carousel{background:#0a0a1a}
+body.dark .day-chip{background:#1a1a2e}
+body.dark .day-chip .chip-day,body.dark .day-chip .chip-date{color:#666}
+body.dark .day-chip.active{background:var(--rggmu-blue)}
+body.dark .day-chip.active .chip-day,body.dark .day-chip.active .chip-date{color:#fff}
+body.dark .summary-row .summary-text{color:#aaa}
+body.dark .lesson-card{background:#1a1a2e}
+body.dark .lesson-card.lecture{background:#14243a}
+body.dark .lesson-card.practice{background:#142a18}
+body.dark .lesson-card.lab{background:#2e1a1a}
+body.dark .lesson-card .card-title{color:#fff}
+body.dark .lesson-card .card-meta .meta-row{color:#aaa}
+body.dark .lesson-card .type-badge{background:rgba(255,255,255,.1)}
+body.dark .lesson-timeline .time-start,body.dark .lesson-timeline .time-end{color:#ccc}
+body.dark .timeline-line{background:#2a2a3e}
+body.dark .side-menu{background:#1a1a2e}
+body.dark .side-menu .menu-header{color:#e0e0e0;border-bottom-color:#2c3e50}
+body.dark .side-menu .menu-item{color:#e0e0e0;border-bottom-color:#2c3e50}
+body.dark .modal-content{background:#1a1a2e;color:#fff}
+body.dark .modal-content h3{color:#fff}
+body.dark .modal-content textarea{background:#2a2a3e;color:#fff;border-color:#2a2a3e}
+body.dark .fullscreen-tab{background:#0a0a1a}
+body.dark .stats-card,body.dark .settings-card{background:#1a1a2e}
+body.dark .stats-item{border-bottom-color:#2c3e50}
+body.dark .stats-label{color:#e0e0e0}
+body.dark .settings-item{border-bottom-color:#2c3e50}
+body.dark .settings-item strong{color:#e0e0e0}
+body.dark .settings-item input[type="text"],body.dark .settings-item select{background:#2a2a3e;color:#fff;border-color:#2a2a3e}
+body.dark .calendar-panel{background:#0a0a1a}
+body.dark .calendar-grid .cal-day{background:#1a1a2e;color:#aaa}
+body.dark .calendar-grid .cal-day.other-month{background:transparent;color:#444}
+body.dark .calendar-grid .cal-day.today{background:var(--rggmu-green);color:#fff}
+body.dark .calendar-grid .cal-day.selected{background:var(--rggmu-blue);color:#fff}
+body.dark .empty-day .empty-title{color:#fff}
+body.dark .empty-day .empty-text{color:#666}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-
 <button class="menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
-
 <div class="menu-overlay" id="menuOverlay"></div>
 <div class="side-menu" id="sideMenu">
     <button class="close-menu" id="closeMenu"><i class="fas fa-times"></i></button>
@@ -245,11 +222,8 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
     <div class="menu-item" data-tab="stats"><i class="fas fa-chart-bar"></i> Статистика</div>
     <div class="menu-item" data-tab="settings"><i class="fas fa-cog"></i> Настройки</div>
 </div>
-
 <div class="app-container" id="appContainer">
-    <div class="top-bar">
-        <button class="calendar-toggle-btn" id="calendarToggleBtn"><i class="fas fa-chevron-down"></i></button>
-    </div>
+    <div class="top-bar"><button class="calendar-toggle-btn" id="calendarToggleBtn"><i class="fas fa-chevron-down"></i></button></div>
     <div class="calendar-panel" id="calendarPanel">
         <div class="month-header">
             <button id="prevMonthBtn"><i class="fas fa-chevron-left"></i></button>
@@ -263,42 +237,31 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         <div class="days-scroll" id="daysScroll"></div>
         <button class="week-arrow" id="nextWeekBtn"><i class="fas fa-chevron-right"></i></button>
     </div>
-    <div class="summary-row">
-        <i class="fas fa-bars"></i>
-        <span class="summary-text" id="summaryText">Загрузка...</span>
-    </div>
-    <div class="schedule-list-wrapper" id="scheduleListWrapper">
-        <div id="scheduleList"></div>
-    </div>
+    <div class="summary-row"><i class="fas fa-bars"></i><span class="summary-text" id="summaryText">Загрузка...</span></div>
+    <div class="schedule-list-wrapper" id="scheduleListWrapper"><div id="scheduleList"></div></div>
 </div>
-
 <button class="today-fab" id="todayBtn"><i class="fas fa-calendar-day"></i> Сегодня</button>
-
 <div id="statsTab" class="fullscreen-tab"><div id="statsContainer"></div></div>
-
 <div id="settingsTab" class="fullscreen-tab">
     <div class="settings-card">
         <div class="settings-title"><i class="fas fa-users"></i> Группа</div>
-        <div class="settings-item">
-            <strong>Название группы</strong>
-            <input type="text" id="groupNameInput" placeholder="Например: ФЛ-Б25-1-3" value="">
+        <div class="settings-item"><strong>Название группы</strong><input type="text" id="groupNameInput" placeholder="Например: ФЛ-Б25-1-3" value=""></div>
+        <div class="settings-item"><strong>Подгруппа</strong>
+            <select id="subgroupSelect">
+                <option value="">Обе подгруппы</option>
+                <option value="1 подгруппа">1 подгруппа</option>
+                <option value="2 подгруппа">2 подгруппа</option>
+            </select>
         </div>
-        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:8px;">
             <button class="btn-update" id="saveGroupBtn"><i class="fas fa-save"></i> Сохранить и загрузить</button>
         </div>
     </div>
-
     <div class="settings-card">
         <div class="settings-title"><i class="fas fa-cloud-download-alt"></i> Расписание</div>
-        <div class="settings-item">
-            <strong>Версия на сервере</strong>
-            <span class="settings-value" id="currentVersion">—</span>
-        </div>
-        <div class="settings-item">
-            <strong>Последняя проверка</strong>
-            <span class="settings-value" id="lastCheckDisplay">—</span>
-        </div>
-        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <div class="settings-item"><strong>Версия на сервере</strong><span class="settings-value" id="currentVersion">—</span></div>
+        <div class="settings-item"><strong>Последняя проверка</strong><span class="settings-value" id="lastCheckDisplay">—</span></div>
+        <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:8px;">
             <button class="btn-update" id="forceUpdateBtn"><i class="fas fa-sync-alt"></i> Проверить обновления</button>
             <div class="update-status" id="updateStatus"></div>
         </div>
@@ -307,31 +270,15 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         <div class="settings-title"><i class="fas fa-palette"></i> Внешний вид</div>
         <div class="settings-item">
             <strong><i class="fas fa-moon"></i> Тёмная тема</strong>
-            <label class="toggle-switch">
-                <input type="checkbox" id="darkModeToggle">
-                <span class="toggle-slider"></span>
-            </label>
+            <label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="toggle-slider"></span></label>
         </div>
     </div>
     <div class="settings-card">
         <div class="settings-title"><i class="fas fa-check-circle"></i> Функции</div>
-        <div class="settings-item">
-            <strong>Отметки на парах</strong>
-            <label class="toggle-switch">
-                <input type="checkbox" id="showCheckinsToggle" checked>
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-        <div class="settings-item">
-            <strong>Заметки</strong>
-            <label class="toggle-switch">
-                <input type="checkbox" id="showProductivityToggle" checked>
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
+        <div class="settings-item"><strong>Отметки на парах</strong><label class="toggle-switch"><input type="checkbox" id="showCheckinsToggle" checked><span class="toggle-slider"></span></label></div>
+        <div class="settings-item"><strong>Заметки</strong><label class="toggle-switch"><input type="checkbox" id="showProductivityToggle" checked><span class="toggle-slider"></span></label></div>
     </div>
 </div>
-
 <div id="noteModal" class="modal">
     <div class="modal-content">
         <h3><i class="fas fa-sticky-note"></i> Заметка</h3>
@@ -342,7 +289,6 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         </div>
     </div>
 </div>
-
 <div id="confirmOverlay" class="confirm-overlay">
     <div class="confirm-box">
         <div class="confirm-title" id="confirmTitle">Удалить заметку?</div>
@@ -353,831 +299,731 @@ body.dark .settings-item input[type="text"] { background: #2a2a3e; color: #fff; 
         </div>
     </div>
 </div>
-
 <script>
 (function() {
-    'use strict';
+'use strict';
 
-    // Базовый URL к вашему репозиторию на GitHub Pages (замените на свой)
-    var GITHUB_BASE_URL = "https://ilki5.github.io/schedule";
-    var CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 час
+var GITHUB_BASE_URL = "https://ilki5.github.io/schedule";
+var CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
-    var scheduleData = {};
-    var timeSlots = ["09.00-10.35", "10.45-12.20", "13.00-14.35", "14.45-16.20", "16.30-18.05"];
-    var weekdayNames = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
-    var weekdayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+var scheduleData = {};
+var timeSlots = ["09.00-10.35", "10.45-12.20", "13.00-14.35", "14.45-16.20", "16.30-18.05"];
+var weekdayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+var weekdayRu = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
 
-    function formatVersion(iso) {
-        if (!iso) return '—';
-        try {
-            var d = new Date(iso);
-            if (isNaN(d.getTime())) return iso;
-            var dd = String(d.getDate()).padStart(2, '0');
-            var mm = String(d.getMonth() + 1).padStart(2, '0');
-            var yyyy = d.getFullYear();
-            var hh = String(d.getHours()).padStart(2, '0');
-            var mi = String(d.getMinutes()).padStart(2, '0');
-            return dd + '.' + mm + '.' + yyyy + ' ' + hh + ':' + mi;
-        } catch(e) { return iso; }
-    }
+function formatVersion(iso) {
+    if (!iso) return '—';
+    try {
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return iso;
+        return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    } catch(e) { return iso; }
+}
+function formatTimestamp(ms) {
+    if (!ms) return '—';
+    var d = new Date(ms);
+    return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function setUpdateStatus(text, isError) {
+    var el = document.getElementById('updateStatus');
+    if (el) { el.textContent = text; el.style.color = isError ? '#e74c3c' : '#888'; }
+}
 
-    function formatTimestamp(ms) {
-        if (!ms) return '—';
-        var d = new Date(ms);
-        var dd = String(d.getDate()).padStart(2, '0');
-        var mm = String(d.getMonth() + 1).padStart(2, '0');
-        var yyyy = d.getFullYear();
-        var hh = String(d.getHours()).padStart(2, '0');
-        var mi = String(d.getMinutes()).padStart(2, '0');
-        return dd + '.' + mm + '.' + yyyy + ' ' + hh + ':' + mi;
-    }
+function normalizeSlot(slot) {
+    if (!slot) return '';
+    return String(slot).split(' перерыв')[0].trim();
+}
+function parseDateShort(str) {
+    if (!str) return null;
+    var p = String(str).trim().split('.');
+    if (p.length < 3) return null;
+    var d = parseInt(p[0],10), m = parseInt(p[1],10) - 1, y = parseInt(p[2],10);
+    if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
+    if (y < 100) y += 2000;
+    return new Date(y, m, d);
+}
+function formatDate(d) {
+    return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+}
 
-    function setUpdateStatus(text, isError) {
-        var el = document.getElementById('updateStatus');
-        if (el) { el.textContent = text; el.style.color = isError ? '#e74c3c' : '#888'; }
-    }
-
-    // === ИСПРАВЛЕНИЕ 1: нормализация слота ===
-    // "09.00-10.35 перерыв 09.45-09.50" -> "09.00-10.35"
-    function normalizeSlot(slot) {
-        if (!slot) return '';
-        return String(slot).split(' перерыв')[0].trim();
-    }
-
-    // === ИСПРАВЛЕНИЕ 2: парсинг дат с поддержкой -, –, — ===
-    function parseDateShort(str) {
-        if (!str) return null;
-        str = String(str).trim();
-        var parts = str.split('.');
-        if (parts.length < 3) return null;
-        var day = parseInt(parts[0], 10);
-        var month = parseInt(parts[1], 10) - 1;
-        var year = parseInt(parts[2], 10);
-        if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-        if (year < 100) year += 2000;
-        return new Date(year, month, day);
-    }
-
-    function formatDate(d) {
-        return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
-    }
-
-    // === ИСПРАВЛЕНИЕ 3: переписанный парсер ===
-    function parseScheduleJson(json) {
-        var out = {};
-        if (!json || !json.items) return out;
-
-        for (var i = 0; i < json.items.length; i++) {
-            var item = json.items[i];
-            if (!item.dates) continue;
-
-            var slot = normalizeSlot(item.slot);
-            if (!slot) continue;
-
-            var parts = item.dates.split(',');
-            var datesList = [];
-
-            for (var j = 0; j < parts.length; j++) {
-                var part = parts[j].trim();
-                if (!part) continue;
-
-                // Диапазон: поддерживаем "-", "–", "—"
-                var rangeMatch = part.split(/\s*[-–—]\s*/);
-
-                if (rangeMatch.length === 2) {
-                    var start = parseDateShort(rangeMatch[0]);
-                    var end = parseDateShort(rangeMatch[1]);
-                    if (start && end) {
-                        var curr = new Date(start);
-                        while (curr <= end) {
-                            if (curr.getDay() !== 0) { // без воскресенья
-                                datesList.push(formatDate(curr));
-                            }
-                            curr.setDate(curr.getDate() + 1);
-                        }
-                    }
-                } else {
-                    var d = parseDateShort(part);
-                    if (d && d.getDay() !== 0) {
-                        datesList.push(formatDate(d));
-                    }
-                }
+// КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: проверяем item.day — пара попадает только в свой день недели
+function datesForItem(item) {
+    if (!item.dates) return [];
+    var targetDay = item.day ? item.day.toLowerCase() : null;
+    var parts = item.dates.split(',');
+    var result = [];
+    for (var j = 0; j < parts.length; j++) {
+        var part = parts[j].trim();
+        if (!part) continue;
+        var rm = part.split(/\s*[-–—]\s*/);
+        var candidates = [];
+        if (rm.length === 2) {
+            var s = parseDateShort(rm[0]), e = parseDateShort(rm[1]);
+            if (s && e) {
+                var c = new Date(s);
+                while (c <= e) { candidates.push(new Date(c)); c.setDate(c.getDate() + 1); }
             }
+        } else {
+            var d = parseDateShort(part);
+            if (d) candidates.push(d);
+        }
+        for (var k = 0; k < candidates.length; k++) {
+            var dd = candidates[k];
+            if (dd.getDay() === 0) continue;
+            if (targetDay) {
+                var ruDay = weekdayRu[dd.getDay()].toLowerCase();
+                if (ruDay !== targetDay) continue;
+            }
+            result.push(formatDate(dd));
+        }
+    }
+    var seen = {}, uniq = [];
+    for (var i = 0; i < result.length; i++) {
+        if (!seen[result[i]]) { seen[result[i]] = true; uniq.push(result[i]); }
+    }
+    return uniq;
+}
 
-            for (var k = 0; k < datesList.length; k++) {
-                var date = datesList[k];
-                if (!out[date]) out[date] = {};
-                if (!out[date][slot]) out[date][slot] = [];
-
-                var location = "";
-                if (item.isDistance) {
-                    location = "Дистанционно";
-                } else {
-                    var locParts = [];
-                    if (item.aud) locParts.push(item.aud);
-                    if (item.building) locParts.push(item.building);
-                    location = locParts.join(', ');
-                }
-
-                var exists = false;
-                for (var m = 0; m < out[date][slot].length; m++) {
-                    if (out[date][slot][m].name === item.name &&
-                        out[date][slot][m].teacher === item.teacher &&
-                        out[date][slot][m].type === item.type) {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if (!exists) {
-                    out[date][slot].push({
-                        id: item.id,
-                        name: item.name,
-                        type: item.type,
-                        teacher: item.teacher,
-                        room: location,
-                        building: "",
-                        is_distance: item.isDistance,
-                        is_lunch: false,
-                        dates: item.dates
-                    });
-                }
+function parseScheduleJson(json) {
+    var out = {};
+    if (!json || !json.items) return out;
+    for (var i = 0; i < json.items.length; i++) {
+        var item = json.items[i];
+        var slot = normalizeSlot(item.slot);
+        if (!slot) continue;
+        var datesList = datesForItem(item);
+        for (var k = 0; k < datesList.length; k++) {
+            var date = datesList[k];
+            if (!out[date]) out[date] = {};
+            if (!out[date][slot]) out[date][slot] = [];
+            var location = item.isDistance ? 'Дистанционно' : [item.aud, item.building].filter(Boolean).join(', ');
+            var exists = false;
+            for (var m = 0; m < out[date][slot].length; m++) {
+                if (out[date][slot][m].id === item.id) { exists = true; break; }
+            }
+            if (!exists) {
+                out[date][slot].push({
+                    id: item.id,
+                    name: item.name,
+                    type: item.type,
+                    teacher: item.teacher,
+                    room: location,
+                    is_distance: item.isDistance,
+                    subgroup: item.subgroup || '',
+                    dates: item.dates
+                });
             }
         }
-        return out;
     }
+    return out;
+}
 
-    // Получение расписания с GitHub
-    async function loadSchedule() {
-        var groupName = localStorage.getItem('groupName') || '';
-        if (!groupName) {
-            setUpdateStatus('Укажите группу в настройках', true);
-            return;
-        }
+function getSelectedSubgroup() { return localStorage.getItem('selectedSubgroup') || ''; }
 
-        var versionUrl = GITHUB_BASE_URL + '/' + encodeURIComponent(groupName) + '/version.json';
-        var scheduleUrl = GITHUB_BASE_URL + '/' + encodeURIComponent(groupName) + '/schedule.json';
-
-        try {
-            setUpdateStatus('Проверка версии...');
-            var versionResp = await fetch(versionUrl + '?t=' + Date.now());
-            if (!versionResp.ok) throw new Error('Файл версии не найден');
-            var versionData = await versionResp.json();
-
-            var localVersion = localStorage.getItem('scheduleVersion');
-            document.getElementById('currentVersion').textContent = formatVersion(versionData.updatedAt);
-            document.getElementById('lastCheckDisplay').textContent = formatTimestamp(Date.now());
-
-            if (versionData.updatedAt === localVersion) {
-                setUpdateStatus('Обновлений нет');
-                var cached = localStorage.getItem('scheduleData');
-                if (cached) scheduleData = JSON.parse(cached);
-                renderAll();
-                return;
+function getDayLessons(dateStr) {
+    var dayData = scheduleData[dateStr] || {};
+    var chosen = getSelectedSubgroup();
+    var lessons = [];
+    for (var i = 0; i < timeSlots.length; i++) {
+        var slot = timeSlots[i];
+        if (dayData[slot]) {
+            for (var j = 0; j < dayData[slot].length; j++) {
+                var l = dayData[slot][j];
+                if (chosen && l.subgroup && l.subgroup !== chosen) continue;
+                l.time_slot = slot;
+                lessons.push(l);
             }
+        }
+    }
+    return lessons;
+}
 
-            setUpdateStatus('Загрузка расписания...');
-            var scheduleResp = await fetch(scheduleUrl + '?t=' + Date.now());
-            if (!scheduleResp.ok) throw new Error('JSON не найден');
-            var rawJson = await scheduleResp.json();
-
-            var parsed = parseScheduleJson(rawJson);
-            scheduleData = parsed;
-
-            localStorage.setItem('scheduleData', JSON.stringify(parsed));
-            localStorage.setItem('scheduleVersion', versionData.updatedAt);
-
-            setUpdateStatus('Расписание обновлено!');
-            renderAll();
-
-            alert('Расписание для группы ' + groupName + ' обновлено!');
-
-        } catch(e) {
-            setUpdateStatus('Ошибка: ' + e.message, true);
+async function loadSchedule() {
+    var groupName = localStorage.getItem('groupName') || '';
+    if (!groupName) { setUpdateStatus('Укажите группу в настройках', true); return; }
+    var versionUrl = GITHUB_BASE_URL + '/' + encodeURIComponent(groupName) + '/version.json';
+    var scheduleUrl = GITHUB_BASE_URL + '/' + encodeURIComponent(groupName) + '/schedule.json';
+    try {
+        setUpdateStatus('Проверка версии...');
+        var versionResp = await fetch(versionUrl + '?t=' + Date.now());
+        if (!versionResp.ok) throw new Error('Файл версии не найден');
+        var versionData = await versionResp.json();
+        var localVersion = localStorage.getItem('scheduleVersion');
+        document.getElementById('currentVersion').textContent = formatVersion(versionData.updatedAt);
+        document.getElementById('lastCheckDisplay').textContent = formatTimestamp(Date.now());
+        if (versionData.updatedAt === localVersion) {
+            setUpdateStatus('Обновлений нет');
             var cached = localStorage.getItem('scheduleData');
             if (cached) scheduleData = JSON.parse(cached);
             renderAll();
-        }
-    }
-
-    // Запуск проверки каждый час
-    setInterval(function() {
-        if (localStorage.getItem('groupName')) {
-            loadSchedule();
-        }
-    }, CHECK_INTERVAL_MS);
-
-    // Инициализация
-    var checkins = {};
-    var notes = {};
-    try { checkins = JSON.parse(localStorage.getItem('lessonCheckins') || '{}'); } catch(e) {}
-    try { notes = JSON.parse(localStorage.getItem('lessonNotes') || '{}'); } catch(e) {}
-
-    var isDarkMode = localStorage.getItem('darkMode') === 'true';
-    var showCheckins = localStorage.getItem('showCheckins') !== 'false';
-    var showProductivity = localStorage.getItem('showProductivity') !== 'false';
-
-    var selectedDate = new Date();
-    var currentMonthView = selectedDate.getMonth();
-    var currentYearView = selectedDate.getFullYear();
-    var calendarOpen = false;
-    var currentLessonId = null;
-    var currentTab = 'schedule';
-
-    function parseDateStr(str) { var p = str.split('.'); return new Date(parseInt(p[2],10), parseInt(p[1],10) - 1, parseInt(p[0],10)); }
-    function isToday(d) { var t = new Date(); return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear(); }
-    function isSameDay(d1, d2) { return d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear(); }
-    function getMonday(d) { var date = new Date(d); var day = date.getDay(); var diff = (day === 0) ? 6 : (day - 1); date.setDate(date.getDate() - diff); date.setHours(0,0,0,0); return date; }
-
-    function getDayLessons(dateStr) {
-        var dayData = scheduleData[dateStr] || {};
-        var lessons = [];
-        for (var i = 0; i < timeSlots.length; i++) {
-            var slot = timeSlots[i];
-            if (dayData[slot]) {
-                for (var j = 0; j < dayData[slot].length; j++) {
-                    var l = dayData[slot][j];
-                    l.time_slot = slot;
-                    lessons.push(l);
-                }
-            }
-        }
-        return lessons;
-    }
-
-    function getTypeClass(type) {
-        if (type === 'Лекция') return 'lecture';
-        if (type === 'Практика') return 'practice';
-        if (type === 'Лабораторная') return 'lab';
-        return 'lecture';
-    }
-
-    function parseTimeRange(slot) {
-        var parts = slot.split('-');
-        var start = parts[0].trim().replace('.', ':');
-        var end = parts[1].trim().replace('.', ':');
-        var sp = start.split(':').map(Number);
-        var ep = end.split(':').map(Number);
-        return { start: sp[0] * 60 + sp[1], end: ep[0] * 60 + ep[1] };
-    }
-    function getCurrentMinutes() { var now = new Date(); return now.getHours() * 60 + now.getMinutes(); }
-    function isLessonActive(slot, dateStr) {
-        if (!isToday(parseDateStr(dateStr))) return false;
-        var r = parseTimeRange(slot); var cur = getCurrentMinutes();
-        return cur >= r.start && cur <= r.end;
-    }
-    function isLessonPassed(slot, dateStr) {
-        var d = parseDateStr(dateStr); var today = new Date(); today.setHours(0,0,0,0);
-        var dCopy = new Date(d); dCopy.setHours(0,0,0,0);
-        if (dCopy < today) return true;
-        if (dCopy > today) return false;
-        var r = parseTimeRange(slot); var cur = getCurrentMinutes();
-        return cur > r.end;
-    }
-    function getLessonProgress(slot, dateStr) {
-        if (!isToday(parseDateStr(dateStr))) return 0;
-        var r = parseTimeRange(slot); var cur = getCurrentMinutes();
-        if (cur < r.start) return 0;
-        if (cur > r.end) return 1;
-        return (cur - r.start) / (r.end - r.start);
-    }
-
-    function hasNotesOnDate(dateStr) { for (var id in notes) { if (id.indexOf(dateStr) === 0) return true; } return false; }
-
-    function findNextLessonDay(fromDate) {
-        var d = new Date(fromDate); d.setDate(d.getDate() + 1);
-        for (var i = 0; i < 60; i++) {
-            if (d.getDay() !== 0) {
-                var dateStr = formatDate(d);
-                if (getDayLessons(dateStr).length > 0) return new Date(d);
-            }
-            d.setDate(d.getDate() + 1);
-        }
-        return null;
-    }
-
-    function renderCalendar() {
-        var grid = document.getElementById('calendarGrid');
-        if (!grid) return;
-        var months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-        document.getElementById('monthTitle').textContent = months[currentMonthView] + ' ' + currentYearView;
-        var html = '';
-        var shortDays = ['Пн','Вт','Ср','Чт','Пт','Сб'];
-        for (var i = 0; i < 6; i++) html += '<div class="wd-label">' + shortDays[i] + '</div>';
-        var firstDay = new Date(currentYearView, currentMonthView, 1);
-        var lastDay = new Date(currentYearView, currentMonthView + 1, 0);
-        var daysInMonth = lastDay.getDate();
-        var startDay = firstDay.getDay();
-        startDay = (startDay === 0) ? 6 : startDay - 1;
-        var prevLastDay = new Date(currentYearView, currentMonthView, 0).getDate();
-        var cellsBefore = startDay;
-        for (var i = 0; i < cellsBefore; i++) html += '<div class="cal-day other-month">' + (prevLastDay - cellsBefore + i + 1) + '</div>';
-        var cellsAfter = 0;
-        for (var day = 1; day <= daysInMonth; day++) {
-            var d = new Date(currentYearView, currentMonthView, day);
-            if (d.getDay() === 0) continue;
-            var dateStr = formatDate(d);
-            var hasLesson = getDayLessons(dateStr).length > 0;
-            var hasNote = hasNotesOnDate(dateStr);
-            var cls = 'cal-day';
-            if (isToday(d)) cls += ' today';
-            if (isSameDay(d, selectedDate)) cls += ' selected';
-            if (hasLesson) cls += ' has-lesson';
-            if (hasNote) cls += ' has-note';
-            html += '<button class="' + cls + '" data-date="' + dateStr + '">' + day + '</button>';
-            cellsAfter++;
-        }
-        var totalCells = cellsBefore + cellsAfter;
-        var remaining = 36 - totalCells;
-        if (remaining > 0) { for (var i = 1; i <= remaining; i++) html += '<div class="cal-day other-month">' + i + '</div>'; }
-        grid.innerHTML = html;
-        var cells = grid.querySelectorAll('.cal-day[data-date]');
-        for (var i = 0; i < cells.length; i++) {
-            (function(el) {
-                el.addEventListener('click', function() {
-                    selectedDate = parseDateStr(el.getAttribute('data-date'));
-                    currentMonthView = selectedDate.getMonth();
-                    currentYearView = selectedDate.getFullYear();
-                    renderAll();
-                });
-            })(cells[i]);
-        }
-    }
-
-    function toggleCalendar() {
-        calendarOpen = !calendarOpen;
-        var btn = document.getElementById('calendarToggleBtn');
-        var panel = document.getElementById('calendarPanel');
-        if (calendarOpen) { btn.classList.add('open'); panel.classList.add('open'); renderCalendar(); }
-        else { btn.classList.remove('open'); panel.classList.remove('open'); }
-    }
-
-    function renderDaysCarousel() {
-        var scroll = document.getElementById('daysScroll');
-        if (!scroll) return;
-        var monday = getMonday(selectedDate);
-        var html = '';
-        for (var i = 0; i < 6; i++) {
-            var d = new Date(monday);
-            d.setDate(monday.getDate() + i);
-            var dateStr = formatDate(d);
-            var isActive = isSameDay(d, selectedDate);
-            var dayName = weekdayShort[d.getDay() === 0 ? 6 : d.getDay() - 1];
-            var dayNum = String(d.getDate()).padStart(2, '0');
-            var monthNum = String(d.getMonth() + 1).padStart(2, '0');
-            var lessons = getDayLessons(dateStr);
-            var barsHtml = '';
-            for (var j = 0; j < lessons.length; j++) barsHtml += '<div class="bar ' + getTypeClass(lessons[j].type) + '"></div>';
-            var hasNote = hasNotesOnDate(dateStr);
-            var noteHtml = hasNote ? '<span class="chip-note">📝</span>' : '';
-            html += '<button class="day-chip ' + (isActive ? 'active' : '') + '" data-date="' + dateStr + '">' +
-                noteHtml + '<span class="chip-day">' + dayName + '</span>' +
-                '<span class="chip-date">' + dayNum + '.' + monthNum + '</span>' +
-                '<div class="chip-bars">' + barsHtml + '</div></button>';
-        }
-        scroll.innerHTML = html;
-        var chips = scroll.querySelectorAll('.day-chip');
-        for (var i = 0; i < chips.length; i++) {
-            (function(chip) {
-                chip.addEventListener('click', function() {
-                    selectedDate = parseDateStr(chip.getAttribute('data-date'));
-                    renderAll();
-                });
-            })(chips[i]);
-        }
-    }
-
-    function renderSchedule() {
-        var dateStr = formatDate(selectedDate);
-        var lessons = getDayLessons(dateStr);
-        var list = document.getElementById('scheduleList');
-        if (!list) return;
-
-        if (lessons.length === 0) {
-            var nextLesson = findNextLessonDay(selectedDate);
-            var nextText = 'Занятий в этот день нет.';
-            if (nextLesson) {
-                var months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-                nextText += ' Ближайшие пары — ' + nextLesson.getDate() + ' ' + months[nextLesson.getMonth()];
-            }
-            list.innerHTML = '<div class="empty-day">' +
-                '<div class="empty-icon"><i class="fas fa-mug-hot"></i></div>' +
-                '<div class="empty-title">Пар нет</div>' +
-                '<div class="empty-text">' + nextText + '</div>' +
-                '<button class="empty-link" id="goNextBtn">Перейти к ближайшим парам</button></div>';
-            var goBtn = document.getElementById('goNextBtn');
-            if (goBtn) goBtn.addEventListener('click', function() {
-                if (nextLesson) {
-                    selectedDate = nextLesson;
-                    currentMonthView = nextLesson.getMonth();
-                    currentYearView = nextLesson.getFullYear();
-                    renderAll();
-                }
-            });
-            document.getElementById('summaryText').textContent = 'Занятий нет';
             return;
         }
-
-        var lectureCount = 0, practiceCount = 0, labCount = 0;
-        for (var i = 0; i < lessons.length; i++) {
-            if (lessons[i].type === 'Лекция') lectureCount++;
-            else if (lessons[i].type === 'Практика') practiceCount++;
-            else if (lessons[i].type === 'Лабораторная') labCount++;
-        }
-        var parts = [];
-        if (lectureCount > 0) parts.push('Лекций ' + lectureCount);
-        if (practiceCount > 0) parts.push('Практик ' + practiceCount);
-        if (labCount > 0) parts.push('Лаб ' + labCount);
-        document.getElementById('summaryText').textContent = parts.join(' · ') || 'Занятий нет';
-
-        var html = '';
-        for (var i = 0; i < lessons.length; i++) {
-            var lesson = lessons[i];
-            var pairIndex = i + 1;
-            var typeClass = getTypeClass(lesson.type);
-            var isActive = isLessonActive(lesson.time_slot, dateStr);
-            var isPassed = isLessonPassed(lesson.time_slot, dateStr);
-            var progress = getLessonProgress(lesson.time_slot, dateStr);
-            var startStr = lesson.time_slot.split('-')[0].trim();
-            var endStr = lesson.time_slot.split('-')[1].trim();
-
-            var lineProgressHeight = 0;
-            var progressDotHtml = '';
-            var lineClass = 'timeline-line ' + typeClass;
-
-            if (isActive) {
-                lineProgressHeight = Math.round(progress * 100);
-                var dotTop = Math.round(progress * 100);
-                progressDotHtml = '<div class="timeline-progress-dot ' + typeClass + '" style="top: ' + dotTop + '%;"></div>';
-            } else if (isPassed) {
-                lineClass = 'timeline-line passed ' + typeClass;
-            }
-
-            var lineProgressHtml = lineProgressHeight > 0 ? '<div class="line-progress" style="height: ' + lineProgressHeight + '%;"></div>' : '';
-
-            var typeBadge = lesson.type ? '<span class="type-badge ' + typeClass + '">' + lesson.type + '</span>' : '';
-            var isDistance = lesson.is_distance;
-            var distanceIcon = isDistance ? '<i class="fas fa-wifi" style="color:var(--rggmu-blue);"></i> ' : '';
-            var progressBarHtml = isActive ? '<div class="card-progress"><div class="progress-fill" style="width: ' + Math.round(progress * 100) + '%;"></div></div>' : '';
-
-            var roomDisplay = lesson.room || '';
-
-            var hasNote = !!notes[lesson.id];
-            var noteIndicator = hasNote ? '<i class="fas fa-sticky-note card-note-indicator"></i>' : '';
-
-            var isChecked = !!checkins[lesson.id];
-            var actionsHtml = '';
-            if (showCheckins) {
-                var cls = isChecked ? 'checkin checked' : 'checkin';
-                var txt = isChecked ? '<i class="fas fa-check-circle"></i> Отмечено' : '<i class="fas fa-check-circle"></i> Отметиться';
-                actionsHtml += '<button class="action-btn ' + cls + '" data-action="checkin" data-id="' + lesson.id + '">' + txt + '</button>';
-            }
-            if (showProductivity) {
-                actionsHtml += '<button class="action-btn note" data-action="note" data-id="' + lesson.id + '"><i class="fas fa-pen"></i> ' + (hasNote ? 'Изменить' : 'Заметка') + '</button>';
-            }
-
-            var noteTextHtml = '';
-            if (hasNote && showProductivity) {
-                var txt = notes[lesson.id].length > 50 ? notes[lesson.id].substring(0, 50) + '...' : notes[lesson.id];
-                noteTextHtml = '<div class="card-note-text"><span><i class="fas fa-sticky-note"></i> ' + txt + '</span><button class="delete-note-btn" data-delete="' + lesson.id + '">Удалить</button></div>';
-            }
-
-            html += '<div class="lesson-row">' +
-                '<div class="lesson-timeline">' +
-                '<div class="pair-number ' + typeClass + '">' + pairIndex + '</div>' +
-                '<div class="time-start">' + startStr + '</div>' +
-                '<div class="timeline-line-wrapper"><div class="' + lineClass + '">' + lineProgressHtml + progressDotHtml + '</div></div>' +
-                '<div class="time-end">' + endStr + '</div>' +
-                '</div>' +
-                '<div class="lesson-card ' + typeClass + (isActive ? ' active-lesson' : '') + '" data-lesson-id="' + lesson.id + '">' +
-                noteIndicator +
-                '<div class="card-header">' + typeBadge + '</div>' +
-                '<div class="card-title">' + distanceIcon + lesson.name + '</div>' +
-                '<div class="card-meta">' +
-                (lesson.teacher ? '<div class="meta-row"><i class="fas fa-user"></i><span>' + lesson.teacher + '</span></div>' : '') +
-                (roomDisplay ? '<div class="meta-row"><i class="fas fa-map-marker-alt"></i><span>' + roomDisplay + '</span></div>' : '') +
-                '</div>' + progressBarHtml + noteTextHtml +
-                '<div class="card-actions">' + actionsHtml + '</div></div></div>';
-        }
-        html += '<div style="height: 40px;"></div>';
-        list.innerHTML = html;
-
-        var cards = list.querySelectorAll('.lesson-card');
-        for (var i = 0; i < cards.length; i++) {
-            (function(card) {
-                card.addEventListener('click', function(e) {
-                    if (e.target.closest('.action-btn') || e.target.closest('.delete-note-btn')) return;
-                    card.classList.toggle('expanded');
-                });
-            })(cards[i]);
-        }
-
-        var checkinBtns = list.querySelectorAll('.action-btn[data-action="checkin"]');
-        for (var i = 0; i < checkinBtns.length; i++) {
-            (function(btn) {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    toggleCheckin(btn.getAttribute('data-id'));
-                });
-            })(checkinBtns[i]);
-        }
-
-        var noteBtns = list.querySelectorAll('.action-btn[data-action="note"]');
-        for (var i = 0; i < noteBtns.length; i++) {
-            (function(btn) {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    openNoteModal(btn.getAttribute('data-id'));
-                });
-            })(noteBtns[i]);
-        }
-
-        var delBtns = list.querySelectorAll('.delete-note-btn');
-        for (var i = 0; i < delBtns.length; i++) {
-            (function(btn) {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    showConfirm(btn.getAttribute('data-delete'));
-                });
-            })(delBtns[i]);
-        }
-    }
-
-    function toggleCheckin(lessonId) {
-        if (checkins[lessonId]) delete checkins[lessonId];
-        else checkins[lessonId] = { id: lessonId, date: new Date().toISOString() };
-        localStorage.setItem('lessonCheckins', JSON.stringify(checkins));
-        renderSchedule();
-    }
-
-    function openNoteModal(lessonId) {
-        currentLessonId = lessonId;
-        document.getElementById('noteText').value = notes[lessonId] || '';
-        document.getElementById('noteModal').style.display = 'flex';
-    }
-    function closeNoteModal() {
-        document.getElementById('noteModal').style.display = 'none';
-        currentLessonId = null;
-    }
-    window.closeNoteModal = closeNoteModal;
-    function saveNote() {
-        if (currentLessonId) {
-            var text = document.getElementById('noteText').value.trim();
-            if (text) notes[currentLessonId] = text;
-            else delete notes[currentLessonId];
-            localStorage.setItem('lessonNotes', JSON.stringify(notes));
-        }
-        closeNoteModal();
+        setUpdateStatus('Загрузка расписания...');
+        var scheduleResp = await fetch(scheduleUrl + '?t=' + Date.now());
+        if (!scheduleResp.ok) throw new Error('JSON не найден');
+        var rawJson = await scheduleResp.json();
+        scheduleData = parseScheduleJson(rawJson);
+        localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
+        localStorage.setItem('scheduleVersion', versionData.updatedAt);
+        setUpdateStatus('Расписание обновлено!');
+        renderAll();
+    } catch(e) {
+        setUpdateStatus('Ошибка: ' + e.message, true);
+        var cached2 = localStorage.getItem('scheduleData');
+        if (cached2) scheduleData = JSON.parse(cached2);
         renderAll();
     }
-    window.saveNote = saveNote;
+}
 
-    var pendingDeleteId = null;
-    function showConfirm(lessonId) {
-        pendingDeleteId = lessonId;
-        document.getElementById('confirmOverlay').classList.add('active');
-    }
-    function closeConfirm() {
-        pendingDeleteId = null;
-        document.getElementById('confirmOverlay').classList.remove('active');
-    }
-    function confirmAction() {
-        if (pendingDeleteId) {
-            delete notes[pendingDeleteId];
-            localStorage.setItem('lessonNotes', JSON.stringify(notes));
-            pendingDeleteId = null;
-            renderAll();
+setInterval(function() { if (localStorage.getItem('groupName')) loadSchedule(); }, CHECK_INTERVAL_MS);
+
+var checkins = {}, notes = {};
+try { checkins = JSON.parse(localStorage.getItem('lessonCheckins') || '{}'); } catch(e) {}
+try { notes = JSON.parse(localStorage.getItem('lessonNotes') || '{}'); } catch(e) {}
+
+var isDarkMode = localStorage.getItem('darkMode') === 'true';
+var showCheckins = localStorage.getItem('showCheckins') !== 'false';
+var showProductivity = localStorage.getItem('showProductivity') !== 'false';
+
+var selectedDate = new Date();
+var currentMonthView = selectedDate.getMonth();
+var currentYearView = selectedDate.getFullYear();
+var calendarOpen = false;
+var currentLessonId = null;
+var currentTab = 'schedule';
+
+function parseDateStr(str) { var p = str.split('.'); return new Date(parseInt(p[2],10), parseInt(p[1],10) - 1, parseInt(p[0],10)); }
+function isToday(d) { var t = new Date(); return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear(); }
+function isSameDay(d1, d2) { return d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear(); }
+function getMonday(d) { var date = new Date(d); var day = date.getDay(); var diff = (day === 0) ? 6 : (day - 1); date.setDate(date.getDate() - diff); date.setHours(0,0,0,0); return date; }
+
+function getTypeClass(type) {
+    if (type === 'Лекция') return 'lecture';
+    if (type === 'Практика') return 'practice';
+    if (type === 'Лабораторная') return 'lab';
+    return 'lecture';
+}
+function parseTimeRange(slot) {
+    var parts = slot.split('-');
+    var start = parts[0].trim().replace('.', ':');
+    var end = parts[1].trim().replace('.', ':');
+    var sp = start.split(':').map(Number);
+    var ep = end.split(':').map(Number);
+    return { start: sp[0]*60+sp[1], end: ep[0]*60+ep[1] };
+}
+function getCurrentMinutes() { var now = new Date(); return now.getHours()*60+now.getMinutes(); }
+function isLessonActive(slot, dateStr) {
+    if (!isToday(parseDateStr(dateStr))) return false;
+    var r = parseTimeRange(slot); var cur = getCurrentMinutes();
+    return cur >= r.start && cur <= r.end;
+}
+function isLessonPassed(slot, dateStr) {
+    var d = parseDateStr(dateStr); var today = new Date(); today.setHours(0,0,0,0);
+    var dCopy = new Date(d); dCopy.setHours(0,0,0,0);
+    if (dCopy < today) return true;
+    if (dCopy > today) return false;
+    var r = parseTimeRange(slot); var cur = getCurrentMinutes();
+    return cur > r.end;
+}
+function getLessonProgress(slot, dateStr) {
+    if (!isToday(parseDateStr(dateStr))) return 0;
+    var r = parseTimeRange(slot); var cur = getCurrentMinutes();
+    if (cur < r.start) return 0;
+    if (cur > r.end) return 1;
+    return (cur - r.start) / (r.end - r.start);
+}
+function hasNotesOnDate(dateStr) { for (var id in notes) { if (id.indexOf(dateStr) === 0) return true; } return false; }
+
+function findNextLessonDay(fromDate) {
+    var d = new Date(fromDate); d.setDate(d.getDate() + 1);
+    for (var i = 0; i < 60; i++) {
+        if (d.getDay() !== 0) {
+            var dateStr = formatDate(d);
+            if (getDayLessons(dateStr).length > 0) return new Date(d);
         }
-        document.getElementById('confirmOverlay').classList.remove('active');
+        d.setDate(d.getDate() + 1);
     }
-    window.closeConfirm = closeConfirm;
-    window.confirmAction = confirmAction;
+    return null;
+}
 
-    function updateStats() {
-        var stats = {};
-        for (var dateStr in scheduleData) {
-            for (var slot in scheduleData[dateStr]) {
-                for (var i = 0; i < scheduleData[dateStr][slot].length; i++) {
-                    var lesson = scheduleData[dateStr][slot][i];
-                    var subj = lesson.name;
-                    var cat = lesson.type === 'Лекция' ? 'Лекции' : lesson.type === 'Практика' ? 'Практики' : lesson.type === 'Лабораторная' ? 'Лабораторные' : lesson.type;
-                    if (!stats[subj]) stats[subj] = {};
-                    if (!stats[subj][cat]) stats[subj][cat] = { total: 0, checked: 0 };
-                    stats[subj][cat].total++;
-                    if (checkins[lesson.id]) stats[subj][cat].checked++;
-                }
-            }
-        }
-        var container = document.getElementById('statsContainer');
-        if (Object.keys(stats).length === 0) { container.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Нет данных</div>'; return; }
-        var html = '';
-        for (var subj in stats) {
-            html += '<div class="stats-card"><div class="stats-subject">' + subj + '</div>';
-            for (var cat in stats[subj]) {
-                var data = stats[subj][cat];
-                if (data.total === 0) continue;
-                var pct = Math.round(data.checked / data.total * 100);
-                html += '<div class="stats-item" data-pct="' + pct + '">' +
-                    '<div class="stats-label">' + cat + '</div>' +
-                    '<div class="stats-progress-wrapper">' +
-                    '<div class="stats-progress"><div class="stats-bar" style="width:0%"></div></div>' +
-                    '<div class="stats-percent">' + data.checked + '/' + data.total + ' (' + pct + '%)</div>' +
-                    '</div></div>';
-            }
-            html += '</div>';
-        }
-        html += '<div style="height: 40px;"></div>';
-        container.innerHTML = html;
-        setTimeout(function() {
-            var items = container.querySelectorAll('.stats-item');
-            for (var i = 0; i < items.length; i++) {
-                var bar = items[i].querySelector('.stats-bar');
-                if (bar) bar.style.width = items[i].getAttribute('data-pct') + '%';
-            }
-        }, 100);
+function renderCalendar() {
+    var grid = document.getElementById('calendarGrid');
+    if (!grid) return;
+    var months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    document.getElementById('monthTitle').textContent = months[currentMonthView] + ' ' + currentYearView;
+    var html = '';
+    var shortDays = ['Пн','Вт','Ср','Чт','Пт','Сб'];
+    for (var i = 0; i < 6; i++) html += '<div class="wd-label">' + shortDays[i] + '</div>';
+    var firstDay = new Date(currentYearView, currentMonthView, 1);
+    var lastDay = new Date(currentYearView, currentMonthView + 1, 0);
+    var daysInMonth = lastDay.getDate();
+    var startDay = firstDay.getDay();
+    startDay = (startDay === 0) ? 6 : startDay - 1;
+    var prevLastDay = new Date(currentYearView, currentMonthView, 0).getDate();
+    var cellsBefore = startDay;
+    for (var i = 0; i < cellsBefore; i++) html += '<div class="cal-day other-month">' + (prevLastDay - cellsBefore + i + 1) + '</div>';
+    var cellsAfter = 0;
+    for (var day = 1; day <= daysInMonth; day++) {
+        var d = new Date(currentYearView, currentMonthView, day);
+        if (d.getDay() === 0) continue;
+        var dateStr = formatDate(d);
+        var hasLesson = getDayLessons(dateStr).length > 0;
+        var hasNote = hasNotesOnDate(dateStr);
+        var cls = 'cal-day';
+        if (isToday(d)) cls += ' today';
+        if (isSameDay(d, selectedDate)) cls += ' selected';
+        if (hasLesson) cls += ' has-lesson';
+        if (hasNote) cls += ' has-note';
+        html += '<button class="' + cls + '" data-date="' + dateStr + '">' + day + '</button>';
+        cellsAfter++;
     }
-
-    function updateTodayFab() {
-        var fab = document.getElementById('todayBtn');
-        if (!fab) return;
-        if (currentTab !== 'schedule') { fab.classList.add('hidden'); return; }
-        if (isToday(selectedDate)) fab.classList.add('hidden');
-        else fab.classList.remove('hidden');
-    }
-
-    function switchTab(tab) {
-        currentTab = tab;
-        var scheduleEl = document.getElementById('appContainer');
-        var statsEl = document.getElementById('statsTab');
-        var settingsEl = document.getElementById('settingsTab');
-        var menuItems = document.querySelectorAll('.side-menu .menu-item');
-        if (tab === 'schedule') { scheduleEl.style.display = 'flex'; statsEl.classList.remove('active'); settingsEl.classList.remove('active'); }
-        else if (tab === 'stats') { scheduleEl.style.display = 'none'; statsEl.classList.add('active'); settingsEl.classList.remove('active'); updateStats(); statsEl.scrollTop = 0; }
-        else if (tab === 'settings') { scheduleEl.style.display = 'none'; statsEl.classList.remove('active'); settingsEl.classList.add('active'); }
-        for (var i = 0; i < menuItems.length; i++) menuItems[i].classList.remove('active');
-        if (tab === 'schedule') menuItems[0].classList.add('active');
-        else if (tab === 'stats') menuItems[1].classList.add('active');
-        else if (tab === 'settings') menuItems[2].classList.add('active');
-        updateTodayFab();
-    }
-
-    function initMenu() {
-        var menuBtn = document.getElementById('menuBtn');
-        var sideMenu = document.getElementById('sideMenu');
-        var overlay = document.getElementById('menuOverlay');
-        var closeBtn = document.getElementById('closeMenu');
-        if (!menuBtn || !sideMenu || !overlay || !closeBtn) return;
-        function closeMenu() { sideMenu.classList.remove('open'); overlay.style.opacity = '0'; setTimeout(function() { overlay.style.display = 'none'; }, 300); }
-        menuBtn.onclick = function() { sideMenu.classList.add('open'); overlay.style.display = 'block'; setTimeout(function() { overlay.style.opacity = '1'; }, 10); };
-        closeBtn.onclick = closeMenu;
-        overlay.onclick = closeMenu;
-        var items = document.querySelectorAll('.side-menu .menu-item');
-        for (var i = 0; i < items.length; i++) {
-            (function(item) {
-                item.onclick = function() { switchTab(item.getAttribute('data-tab')); closeMenu(); };
-            })(items[i]);
-        }
-    }
-
-    function applyDarkMode() {
-        if (isDarkMode) document.body.classList.add('dark');
-        else document.body.classList.remove('dark');
-        var t = document.getElementById('darkModeToggle');
-        if (t) t.checked = isDarkMode;
-    }
-
-    function renderAll() {
-        renderDaysCarousel();
-        renderSchedule();
-        if (calendarOpen) renderCalendar();
-        updateTodayFab();
-    }
-
-    function changeDay(delta) {
-        var d = new Date(selectedDate);
-        d.setDate(d.getDate() + delta);
-        if (d.getDay() === 0) d.setDate(d.getDate() + (delta > 0 ? 1 : -1));
-        selectedDate = d;
-        currentMonthView = d.getMonth();
-        currentYearView = d.getFullYear();
-        renderAll();
-    }
-
-    function changeWeek(delta) {
-        var d = new Date(selectedDate);
-        d.setDate(d.getDate() + delta * 7);
-        selectedDate = d;
-        currentMonthView = d.getMonth();
-        currentYearView = d.getFullYear();
-        renderAll();
-    }
-
-    function goToToday() {
-        selectedDate = new Date();
-        currentMonthView = selectedDate.getMonth();
-        currentYearView = selectedDate.getFullYear();
-        renderAll();
-    }
-
-    function setupScheduleSwipe() {
-        var wrapper = document.getElementById('scheduleListWrapper');
-        if (!wrapper) return;
-        var startX = 0, startY = 0, startTime = 0;
-        wrapper.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; startY = e.touches[0].clientY; startTime = Date.now(); }, { passive: true });
-        wrapper.addEventListener('touchend', function(e) {
-            var dx = e.changedTouches[0].clientX - startX;
-            var dy = e.changedTouches[0].clientY - startY;
-            var dt = Date.now() - startTime;
-            if (dt < 500 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-                if (dx < 0) changeDay(1); else changeDay(-1);
-            }
-        }, { passive: true });
-    }
-
-    function setupCalendarSwipe() {
-        var panel = document.getElementById('calendarPanel');
-        if (!panel) return;
-        var startX = 0, startY = 0;
-        panel.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, { passive: true });
-        panel.addEventListener('touchend', function(e) {
-            var dx = e.changedTouches[0].clientX - startX;
-            var dy = e.changedTouches[0].clientY - startY;
-            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-                if (dx < 0) { currentMonthView++; if (currentMonthView > 11) { currentMonthView = 0; currentYearView++; } }
-                else { currentMonthView--; if (currentMonthView < 0) { currentMonthView = 11; currentYearView--; } }
-                renderCalendar();
-            } else if (dy > 60) { if (calendarOpen) toggleCalendar(); }
-        }, { passive: true });
-    }
-
-    function safeAddListener(id, event, handler) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener(event, handler);
-    }
-
-    async function init() {
-        try {
-            applyDarkMode();
-            initMenu();
-
-            var savedGroup = localStorage.getItem('groupName') || '';
-            document.getElementById('groupNameInput').value = savedGroup;
-
-            safeAddListener('calendarToggleBtn', 'click', toggleCalendar);
-            safeAddListener('todayBtn', 'click', goToToday);
-            safeAddListener('prevMonthBtn', 'click', function() { currentMonthView--; if (currentMonthView < 0) { currentMonthView = 11; currentYearView--; } renderCalendar(); });
-            safeAddListener('nextMonthBtn', 'click', function() { currentMonthView++; if (currentMonthView > 11) { currentMonthView = 0; currentYearView++; } renderCalendar(); });
-            safeAddListener('prevWeekBtn', 'click', function() { changeWeek(-1); });
-            safeAddListener('nextWeekBtn', 'click', function() { changeWeek(1); });
-
-            safeAddListener('darkModeToggle', 'change', function(e) { isDarkMode = e.target.checked; localStorage.setItem('darkMode', isDarkMode); applyDarkMode(); });
-            safeAddListener('showCheckinsToggle', 'change', function(e) { showCheckins = e.target.checked; localStorage.setItem('showCheckins', showCheckins); renderAll(); });
-            safeAddListener('showProductivityToggle', 'change', function(e) { showProductivity = e.target.checked; localStorage.setItem('showProductivity', showProductivity); renderAll(); });
-
-            safeAddListener('saveGroupBtn', 'click', function() {
-                var name = document.getElementById('groupNameInput').value.trim();
-                if (name) {
-                    localStorage.setItem('groupName', name);
-                    localStorage.removeItem('scheduleVersion');
-                    loadSchedule();
-                } else {
-                    alert('Введите название группы');
-                }
-            });
-
-            safeAddListener('forceUpdateBtn', 'click', async function() {
-                var btn = document.getElementById('forceUpdateBtn');
-                if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...'; }
-                // Сбрасываем кэш, чтобы гарантированно перечитать JSON
-                localStorage.removeItem('scheduleVersion');
-                await loadSchedule();
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Проверить обновления'; }
-            });
-
-            safeAddListener('noteModal', 'click', function(e) { if (e.target === this) closeNoteModal(); });
-            safeAddListener('confirmOverlay', 'click', function(e) { if (e.target === this) closeConfirm(); });
-
-            setupScheduleSwipe();
-            setupCalendarSwipe();
-
-            if (savedGroup) {
-                await loadSchedule();
-            } else {
+    var remaining = 36 - (cellsBefore + cellsAfter);
+    if (remaining > 0) { for (var i = 1; i <= remaining; i++) html += '<div class="cal-day other-month">' + i + '</div>'; }
+    grid.innerHTML = html;
+    var cells = grid.querySelectorAll('.cal-day[data-date]');
+    for (var i = 0; i < cells.length; i++) {
+        (function(el) {
+            el.addEventListener('click', function() {
+                selectedDate = parseDateStr(el.getAttribute('data-date'));
+                currentMonthView = selectedDate.getMonth();
+                currentYearView = selectedDate.getFullYear();
                 renderAll();
-                setUpdateStatus('Укажите группу в настройках', true);
+            });
+        })(cells[i]);
+    }
+}
+
+function toggleCalendar() {
+    calendarOpen = !calendarOpen;
+    var btn = document.getElementById('calendarToggleBtn');
+    var panel = document.getElementById('calendarPanel');
+    if (calendarOpen) { btn.classList.add('open'); panel.classList.add('open'); renderCalendar(); }
+    else { btn.classList.remove('open'); panel.classList.remove('open'); }
+}
+
+function renderDaysCarousel() {
+    var scroll = document.getElementById('daysScroll');
+    if (!scroll) return;
+    var monday = getMonday(selectedDate);
+    var html = '';
+    for (var i = 0; i < 6; i++) {
+        var d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        var dateStr = formatDate(d);
+        var isActive = isSameDay(d, selectedDate);
+        var dayName = weekdayShort[d.getDay() === 0 ? 6 : d.getDay() - 1];
+        var dayNum = String(d.getDate()).padStart(2, '0');
+        var monthNum = String(d.getMonth() + 1).padStart(2, '0');
+        var lessons = getDayLessons(dateStr);
+        var barsHtml = '';
+        for (var j = 0; j < lessons.length; j++) barsHtml += '<div class="bar ' + getTypeClass(lessons[j].type) + '"></div>';
+        var hasNote = hasNotesOnDate(dateStr);
+        var noteHtml = hasNote ? '<span class="chip-note">📝</span>' : '';
+        html += '<button class="day-chip ' + (isActive ? 'active' : '') + '" data-date="' + dateStr + '">' + noteHtml +
+            '<span class="chip-day">' + dayName + '</span><span class="chip-date">' + dayNum + '.' + monthNum + '</span>' +
+            '<div class="chip-bars">' + barsHtml + '</div></button>';
+    }
+    scroll.innerHTML = html;
+    var chips = scroll.querySelectorAll('.day-chip');
+    for (var i = 0; i < chips.length; i++) {
+        (function(chip) {
+            chip.addEventListener('click', function() {
+                selectedDate = parseDateStr(chip.getAttribute('data-date'));
+                renderAll();
+            });
+        })(chips[i]);
+    }
+}
+
+function renderSchedule() {
+    var dateStr = formatDate(selectedDate);
+    var lessons = getDayLessons(dateStr);
+    var list = document.getElementById('scheduleList');
+    if (!list) return;
+    if (lessons.length === 0) {
+        var nextLesson = findNextLessonDay(selectedDate);
+        var nextText = 'Занятий в этот день нет.';
+        if (nextLesson) {
+            var months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+            nextText += ' Ближайшие пары — ' + nextLesson.getDate() + ' ' + months[nextLesson.getMonth()];
+        }
+        list.innerHTML = '<div class="empty-day"><div class="empty-icon"><i class="fas fa-mug-hot"></i></div>' +
+            '<div class="empty-title">Пар нет</div><div class="empty-text">' + nextText + '</div>' +
+            '<button class="empty-link" id="goNextBtn">Перейти к ближайшим парам</button></div>';
+        var goBtn = document.getElementById('goNextBtn');
+        if (goBtn) goBtn.addEventListener('click', function() {
+            if (nextLesson) {
+                selectedDate = nextLesson;
+                currentMonthView = nextLesson.getMonth();
+                currentYearView = nextLesson.getFullYear();
+                renderAll();
             }
+        });
+        document.getElementById('summaryText').textContent = 'Занятий нет';
+        return;
+    }
+    var lectureCount = 0, practiceCount = 0, labCount = 0;
+    for (var i = 0; i < lessons.length; i++) {
+        if (lessons[i].type === 'Лекция') lectureCount++;
+        else if (lessons[i].type === 'Практика') practiceCount++;
+        else if (lessons[i].type === 'Лабораторная') labCount++;
+    }
+    var parts = [];
+    if (lectureCount > 0) parts.push('Лекций ' + lectureCount);
+    if (practiceCount > 0) parts.push('Практик ' + practiceCount);
+    if (labCount > 0) parts.push('Лаб ' + labCount);
+    document.getElementById('summaryText').textContent = parts.join(' · ') || 'Занятий нет';
 
-            setInterval(function() { if (currentTab === 'schedule') renderSchedule(); }, 30000);
+    var html = '';
+    for (var i = 0; i < lessons.length; i++) {
+        var lesson = lessons[i];
+        var pairIndex = i + 1;
+        var typeClass = getTypeClass(lesson.type);
+        var isActive = isLessonActive(lesson.time_slot, dateStr);
+        var isPassed = isLessonPassed(lesson.time_slot, dateStr);
+        var progress = getLessonProgress(lesson.time_slot, dateStr);
+        var startStr = lesson.time_slot.split('-')[0].trim();
+        var endStr = lesson.time_slot.split('-')[1].trim();
 
-        } catch(err) {
-            console.error('Init error:', err);
-            var list = document.getElementById('scheduleList');
-            if (list) list.innerHTML = '<div style="padding:40px;text-align:center;color:#e74c3c;">Ошибка: ' + err.message + '</div>';
+        var lineProgressHeight = 0;
+        var progressDotHtml = '';
+        var lineClass = 'timeline-line ' + typeClass;
+        if (isActive) {
+            lineProgressHeight = Math.round(progress * 100);
+            progressDotHtml = '<div class="timeline-progress-dot ' + typeClass + '" style="top: ' + Math.round(progress * 100) + '%;"></div>';
+        } else if (isPassed) {
+            lineClass = 'timeline-line passed ' + typeClass;
+        }
+        var lineProgressHtml = lineProgressHeight > 0 ? '<div class="line-progress" style="height: ' + lineProgressHeight + '%;"></div>' : '';
+        var typeBadge = lesson.type ? '<span class="type-badge ' + typeClass + '">' + lesson.type + '</span>' : '';
+        var distanceIcon = lesson.is_distance ? '<i class="fas fa-wifi" style="color:var(--rggmu-blue);"></i> ' : '';
+        var progressBarHtml = isActive ? '<div class="card-progress"><div class="progress-fill" style="width: ' + Math.round(progress * 100) + '%;"></div></div>' : '';
+        var roomDisplay = lesson.room || '';
+        var subgroupHtml = lesson.subgroup ? ' <span style="font-size:0.65rem;color:#999;">(' + lesson.subgroup + ')</span>' : '';
+        var hasNote = !!notes[lesson.id];
+        var noteIndicator = hasNote ? '<i class="fas fa-sticky-note card-note-indicator"></i>' : '';
+        var isChecked = !!checkins[lesson.id];
+        var actionsHtml = '';
+        if (showCheckins) {
+            var cls = isChecked ? 'checkin checked' : 'checkin';
+            var txt = isChecked ? '<i class="fas fa-check-circle"></i> Отмечено' : '<i class="fas fa-check-circle"></i> Отметиться';
+            actionsHtml += '<button class="action-btn ' + cls + '" data-action="checkin" data-id="' + lesson.id + '">' + txt + '</button>';
+        }
+        if (showProductivity) {
+            actionsHtml += '<button class="action-btn note" data-action="note" data-id="' + lesson.id + '"><i class="fas fa-pen"></i> ' + (hasNote ? 'Изменить' : 'Заметка') + '</button>';
+        }
+        var noteTextHtml = '';
+        if (hasNote && showProductivity) {
+            var txt2 = notes[lesson.id].length > 50 ? notes[lesson.id].substring(0, 50) + '...' : notes[lesson.id];
+            noteTextHtml = '<div class="card-note-text"><span><i class="fas fa-sticky-note"></i> ' + txt2 + '</span><button class="delete-note-btn" data-delete="' + lesson.id + '">Удалить</button></div>';
+        }
+        html += '<div class="lesson-row"><div class="lesson-timeline">' +
+            '<div class="pair-number ' + typeClass + '">' + pairIndex + '</div>' +
+            '<div class="time-start">' + startStr + '</div>' +
+            '<div class="timeline-line-wrapper"><div class="' + lineClass + '">' + lineProgressHtml + progressDotHtml + '</div></div>' +
+            '<div class="time-end">' + endStr + '</div></div>' +
+            '<div class="lesson-card ' + typeClass + (isActive ? ' active-lesson' : '') + '" data-lesson-id="' + lesson.id + '">' +
+            noteIndicator + '<div class="card-header">' + typeBadge + '</div>' +
+            '<div class="card-title">' + distanceIcon + lesson.name + subgroupHtml + '</div>' +
+            '<div class="card-meta">' +
+            (lesson.teacher ? '<div class="meta-row"><i class="fas fa-user"></i><span>' + lesson.teacher + '</span></div>' : '') +
+            (roomDisplay ? '<div class="meta-row"><i class="fas fa-map-marker-alt"></i><span>' + roomDisplay + '</span></div>' : '') +
+            '</div>' + progressBarHtml + noteTextHtml +
+            '<div class="card-actions">' + actionsHtml + '</div></div></div>';
+    }
+    html += '<div style="height:40px;"></div>';
+    list.innerHTML = html;
+
+    var cards = list.querySelectorAll('.lesson-card');
+    for (var i = 0; i < cards.length; i++) {
+        (function(card) {
+            card.addEventListener('click', function(e) {
+                if (e.target.closest('.action-btn') || e.target.closest('.delete-note-btn')) return;
+                card.classList.toggle('expanded');
+            });
+        })(cards[i]);
+    }
+    var checkinBtns = list.querySelectorAll('.action-btn[data-action="checkin"]');
+    for (var i = 0; i < checkinBtns.length; i++) {
+        (function(btn) {
+            btn.addEventListener('click', function(e) { e.stopPropagation(); toggleCheckin(btn.getAttribute('data-id')); });
+        })(checkinBtns[i]);
+    }
+    var noteBtns = list.querySelectorAll('.action-btn[data-action="note"]');
+    for (var i = 0; i < noteBtns.length; i++) {
+        (function(btn) {
+            btn.addEventListener('click', function(e) { e.stopPropagation(); openNoteModal(btn.getAttribute('data-id')); });
+        })(noteBtns[i]);
+    }
+    var delBtns = list.querySelectorAll('.delete-note-btn');
+    for (var i = 0; i < delBtns.length; i++) {
+        (function(btn) {
+            btn.addEventListener('click', function(e) { e.stopPropagation(); showConfirm(btn.getAttribute('data-delete')); });
+        })(delBtns[i]);
+    }
+}
+
+function toggleCheckin(lessonId) {
+    if (checkins[lessonId]) delete checkins[lessonId];
+    else checkins[lessonId] = { id: lessonId, date: new Date().toISOString() };
+    localStorage.setItem('lessonCheckins', JSON.stringify(checkins));
+    renderSchedule();
+}
+function openNoteModal(lessonId) {
+    currentLessonId = lessonId;
+    document.getElementById('noteText').value = notes[lessonId] || '';
+    document.getElementById('noteModal').style.display = 'flex';
+}
+function closeNoteModal() {
+    document.getElementById('noteModal').style.display = 'none';
+    currentLessonId = null;
+}
+window.closeNoteModal = closeNoteModal;
+function saveNote() {
+    if (currentLessonId) {
+        var text = document.getElementById('noteText').value.trim();
+        if (text) notes[currentLessonId] = text;
+        else delete notes[currentLessonId];
+        localStorage.setItem('lessonNotes', JSON.stringify(notes));
+    }
+    closeNoteModal();
+    renderAll();
+}
+window.saveNote = saveNote;
+
+var pendingDeleteId = null;
+function showConfirm(lessonId) { pendingDeleteId = lessonId; document.getElementById('confirmOverlay').classList.add('active'); }
+function closeConfirm() { pendingDeleteId = null; document.getElementById('confirmOverlay').classList.remove('active'); }
+function confirmAction() {
+    if (pendingDeleteId) {
+        delete notes[pendingDeleteId];
+        localStorage.setItem('lessonNotes', JSON.stringify(notes));
+        pendingDeleteId = null;
+        renderAll();
+    }
+    document.getElementById('confirmOverlay').classList.remove('active');
+}
+window.closeConfirm = closeConfirm;
+window.confirmAction = confirmAction;
+
+function updateStats() {
+    var stats = {};
+    for (var dateStr in scheduleData) {
+        for (var slot in scheduleData[dateStr]) {
+            for (var i = 0; i < scheduleData[dateStr][slot].length; i++) {
+                var lesson = scheduleData[dateStr][slot][i];
+                var subj = lesson.name;
+                var cat = lesson.type === 'Лекция' ? 'Лекции' : lesson.type === 'Практика' ? 'Практики' : lesson.type === 'Лабораторная' ? 'Лабораторные' : lesson.type;
+                if (!stats[subj]) stats[subj] = {};
+                if (!stats[subj][cat]) stats[subj][cat] = { total: 0, checked: 0 };
+                stats[subj][cat].total++;
+                if (checkins[lesson.id]) stats[subj][cat].checked++;
+            }
         }
     }
+    var container = document.getElementById('statsContainer');
+    if (Object.keys(stats).length === 0) { container.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">Нет данных</div>'; return; }
+    var html = '';
+    for (var subj in stats) {
+        html += '<div class="stats-card"><div class="stats-subject">' + subj + '</div>';
+        for (var cat in stats[subj]) {
+            var data = stats[subj][cat];
+            if (data.total === 0) continue;
+            var pct = Math.round(data.checked / data.total * 100);
+            html += '<div class="stats-item" data-pct="' + pct + '"><div class="stats-label">' + cat + '</div>' +
+                '<div class="stats-progress-wrapper"><div class="stats-progress"><div class="stats-bar" style="width:0%"></div></div>' +
+                '<div class="stats-percent">' + data.checked + '/' + data.total + ' (' + pct + '%)</div></div></div>';
+        }
+        html += '</div>';
+    }
+    html += '<div style="height:40px;"></div>';
+    container.innerHTML = html;
+    setTimeout(function() {
+        var items = container.querySelectorAll('.stats-item');
+        for (var i = 0; i < items.length; i++) {
+            var bar = items[i].querySelector('.stats-bar');
+            if (bar) bar.style.width = items[i].getAttribute('data-pct') + '%';
+        }
+    }, 100);
+}
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-    else init();
+function updateTodayFab() {
+    var fab = document.getElementById('todayBtn');
+    if (!fab) return;
+    if (currentTab !== 'schedule') { fab.classList.add('hidden'); return; }
+    if (isToday(selectedDate)) fab.classList.add('hidden');
+    else fab.classList.remove('hidden');
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    var scheduleEl = document.getElementById('appContainer');
+    var statsEl = document.getElementById('statsTab');
+    var settingsEl = document.getElementById('settingsTab');
+    var menuItems = document.querySelectorAll('.side-menu .menu-item');
+    if (tab === 'schedule') { scheduleEl.style.display = 'flex'; statsEl.classList.remove('active'); settingsEl.classList.remove('active'); }
+    else if (tab === 'stats') { scheduleEl.style.display = 'none'; statsEl.classList.add('active'); settingsEl.classList.remove('active'); updateStats(); statsEl.scrollTop = 0; }
+    else if (tab === 'settings') { scheduleEl.style.display = 'none'; statsEl.classList.remove('active'); settingsEl.classList.add('active'); }
+    for (var i = 0; i < menuItems.length; i++) menuItems[i].classList.remove('active');
+    if (tab === 'schedule') menuItems[0].classList.add('active');
+    else if (tab === 'stats') menuItems[1].classList.add('active');
+    else if (tab === 'settings') menuItems[2].classList.add('active');
+    updateTodayFab();
+}
+
+function initMenu() {
+    var menuBtn = document.getElementById('menuBtn');
+    var sideMenu = document.getElementById('sideMenu');
+    var overlay = document.getElementById('menuOverlay');
+    var closeBtn = document.getElementById('closeMenu');
+    if (!menuBtn || !sideMenu || !overlay || !closeBtn) return;
+    function closeMenu() { sideMenu.classList.remove('open'); overlay.style.opacity = '0'; setTimeout(function() { overlay.style.display = 'none'; }, 300); }
+    menuBtn.onclick = function() { sideMenu.classList.add('open'); overlay.style.display = 'block'; setTimeout(function() { overlay.style.opacity = '1'; }, 10); };
+    closeBtn.onclick = closeMenu;
+    overlay.onclick = closeMenu;
+    var items = document.querySelectorAll('.side-menu .menu-item');
+    for (var i = 0; i < items.length; i++) {
+        (function(item) { item.onclick = function() { switchTab(item.getAttribute('data-tab')); closeMenu(); }; })(items[i]);
+    }
+}
+
+function applyDarkMode() {
+    if (isDarkMode) document.body.classList.add('dark');
+    else document.body.classList.remove('dark');
+    var t = document.getElementById('darkModeToggle');
+    if (t) t.checked = isDarkMode;
+}
+
+function renderAll() {
+    renderDaysCarousel();
+    renderSchedule();
+    if (calendarOpen) renderCalendar();
+    updateTodayFab();
+}
+
+function changeDay(delta) {
+    var d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta);
+    if (d.getDay() === 0) d.setDate(d.getDate() + (delta > 0 ? 1 : -1));
+    selectedDate = d;
+    currentMonthView = d.getMonth();
+    currentYearView = d.getFullYear();
+    renderAll();
+}
+function changeWeek(delta) {
+    var d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta * 7);
+    selectedDate = d;
+    currentMonthView = d.getMonth();
+    currentYearView = d.getFullYear();
+    renderAll();
+}
+function goToToday() {
+    selectedDate = new Date();
+    currentMonthView = selectedDate.getMonth();
+    currentYearView = selectedDate.getFullYear();
+    renderAll();
+}
+
+function setupScheduleSwipe() {
+    var wrapper = document.getElementById('scheduleListWrapper');
+    if (!wrapper) return;
+    var startX = 0, startY = 0, startTime = 0;
+    wrapper.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; startY = e.touches[0].clientY; startTime = Date.now(); }, { passive: true });
+    wrapper.addEventListener('touchend', function(e) {
+        var dx = e.changedTouches[0].clientX - startX;
+        var dy = e.changedTouches[0].clientY - startY;
+        var dt = Date.now() - startTime;
+        if (dt < 500 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx < 0) changeDay(1); else changeDay(-1);
+        }
+    }, { passive: true });
+}
+function setupCalendarSwipe() {
+    var panel = document.getElementById('calendarPanel');
+    if (!panel) return;
+    var startX = 0, startY = 0;
+    panel.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, { passive: true });
+    panel.addEventListener('touchend', function(e) {
+        var dx = e.changedTouches[0].clientX - startX;
+        var dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+            if (dx < 0) { currentMonthView++; if (currentMonthView > 11) { currentMonthView = 0; currentYearView++; } }
+            else { currentMonthView--; if (currentMonthView < 0) { currentMonthView = 11; currentYearView--; } }
+            renderCalendar();
+        } else if (dy > 60) { if (calendarOpen) toggleCalendar(); }
+    }, { passive: true });
+}
+
+function safeAddListener(id, event, handler) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+}
+
+async function init() {
+    try {
+        applyDarkMode();
+        initMenu();
+
+        var savedGroup = localStorage.getItem('groupName') || '';
+        document.getElementById('groupNameInput').value = savedGroup;
+
+        var savedSub = localStorage.getItem('selectedSubgroup') || '';
+        var subSel = document.getElementById('subgroupSelect');
+        if (subSel) {
+            subSel.value = savedSub;
+            subSel.addEventListener('change', function() {
+                localStorage.setItem('selectedSubgroup', subSel.value);
+                renderAll();
+            });
+        }
+
+        safeAddListener('calendarToggleBtn', 'click', toggleCalendar);
+        safeAddListener('todayBtn', 'click', goToToday);
+        safeAddListener('prevMonthBtn', 'click', function() { currentMonthView--; if (currentMonthView < 0) { currentMonthView = 11; currentYearView--; } renderCalendar(); });
+        safeAddListener('nextMonthBtn', 'click', function() { currentMonthView++; if (currentMonthView > 11) { currentMonthView = 0; currentYearView++; } renderCalendar(); });
+        safeAddListener('prevWeekBtn', 'click', function() { changeWeek(-1); });
+        safeAddListener('nextWeekBtn', 'click', function() { changeWeek(1); });
+        safeAddListener('darkModeToggle', 'change', function(e) { isDarkMode = e.target.checked; localStorage.setItem('darkMode', isDarkMode); applyDarkMode(); });
+        safeAddListener('showCheckinsToggle', 'change', function(e) { showCheckins = e.target.checked; localStorage.setItem('showCheckins', showCheckins); renderAll(); });
+        safeAddListener('showProductivityToggle', 'change', function(e) { showProductivity = e.target.checked; localStorage.setItem('showProductivity', showProductivity); renderAll(); });
+
+        safeAddListener('saveGroupBtn', 'click', function() {
+            var name = document.getElementById('groupNameInput').value.trim();
+            if (name) {
+                localStorage.setItem('groupName', name);
+                localStorage.removeItem('scheduleVersion');
+                loadSchedule();
+            } else {
+                alert('Введите название группы');
+            }
+        });
+        safeAddListener('forceUpdateBtn', 'click', async function() {
+            var btn = document.getElementById('forceUpdateBtn');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...'; }
+            localStorage.removeItem('scheduleVersion');
+            await loadSchedule();
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Проверить обновления'; }
+        });
+        safeAddListener('noteModal', 'click', function(e) { if (e.target === this) closeNoteModal(); });
+        safeAddListener('confirmOverlay', 'click', function(e) { if (e.target === this) closeConfirm(); });
+
+        setupScheduleSwipe();
+        setupCalendarSwipe();
+
+        if (savedGroup) await loadSchedule();
+        else { renderAll(); setUpdateStatus('Укажите группу в настройках', true); }
+
+        setInterval(function() { if (currentTab === 'schedule') renderSchedule(); }, 30000);
+    } catch(err) {
+        console.error('Init error:', err);
+        var list = document.getElementById('scheduleList');
+        if (list) list.innerHTML = '<div style="padding:40px;text-align:center;color:#e74c3c;">Ошибка: ' + err.message + '</div>';
+    }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
 })();
 </script>
 </body>
