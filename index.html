@@ -6,7 +6,17 @@
 <title>Расписание РГГМУ</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-:root{--rggmu-blue:#0066CC;--rggmu-blue-dark:#004A99;--rggmu-light-blue:#4FC3F7;--rggmu-green:#4CAF50;--rggmu-red:#e74c3c;--rggmu-red-dark:#c0392b;--rggmu-red-light:#fdeaea;--rggmu-gray:#B0BEC5;--rggmu-gray-dark:#78909C}
+:root{
+    --rggmu-blue: #0066CC;
+    --rggmu-blue-dark: #004A99;
+    --rggmu-light-blue: #4FC3F7;
+    --rggmu-green: #4CAF50;
+    --rggmu-red: #e74c3c;
+    --rggmu-red-dark: #c0392b;
+    --rggmu-red-light: #fdeaea;
+    --rggmu-gray: #78909C; /* Цвет для переезда */
+    --rggmu-gray-light: #eceff1;
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6f8;height:100%;overflow:hidden;position:fixed;width:100%;color:#1a1a2e}
 .app-container{height:100%;width:100%;overflow:hidden;display:flex;flex-direction:column;background:#f5f6f8}
@@ -44,6 +54,7 @@ html,body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto
 .day-chip .chip-bars .bar.lecture{background:var(--rggmu-blue);height:14px}
 .day-chip .chip-bars .bar.practice{background:var(--rggmu-green);height:12px}
 .day-chip .chip-bars .bar.lab{background:var(--rggmu-red);height:16px}
+.day-chip .chip-bars .bar.pereezd{background:var(--rggmu-gray);height:14px}
 .day-chip.active .chip-bars .bar{background:rgba(255,255,255,.9)}
 .day-chip .chip-note{position:absolute;top:1px;right:2px;font-size:.45rem}
 .summary-row{padding:0 18px 10px 18px;display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -58,6 +69,7 @@ html,body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto
 .lesson-timeline .pair-number.lecture{background:var(--rggmu-blue)}
 .lesson-timeline .pair-number.practice{background:var(--rggmu-green)}
 .lesson-timeline .pair-number.lab{background:var(--rggmu-red)}
+.lesson-timeline .pair-number.pereezd{background:var(--rggmu-gray)}
 .lesson-timeline .time-start{font-size:.7rem;font-weight:700;margin-bottom:2px}
 .timeline-line-wrapper{width:100%;flex:1;padding:10px 0;display:flex;justify-content:center}
 .timeline-line{width:3px;height:100%;background:#e0e0e0;position:relative;border-radius:2px;min-height:40px}
@@ -65,27 +77,33 @@ html,body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto
 .timeline-line.lecture .line-progress{background:var(--rggmu-blue)}
 .timeline-line.practice .line-progress{background:var(--rggmu-green)}
 .timeline-line.lab .line-progress{background:var(--rggmu-red)}
+.timeline-line.pereezd .line-progress{background:var(--rggmu-gray)}
 .timeline-line.passed.lecture{background:var(--rggmu-blue)}
 .timeline-line.passed.practice{background:var(--rggmu-green)}
 .timeline-line.passed.lab{background:var(--rggmu-red)}
+.timeline-line.passed.pereezd{background:var(--rggmu-gray)}
 .timeline-progress-dot{position:absolute;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;z-index:3;transition:top 1s linear;border:2px solid #fff}
 .timeline-progress-dot.lecture{background:var(--rggmu-blue);box-shadow:0 0 0 0 rgba(0,102,204,.7);animation:pulseDotBlue 1.5s infinite}
 .timeline-progress-dot.practice{background:var(--rggmu-green);box-shadow:0 0 0 0 rgba(76,175,80,.7);animation:pulseDotGreen 1.5s infinite}
 .timeline-progress-dot.lab{background:var(--rggmu-red);box-shadow:0 0 0 0 rgba(231,76,60,.7);animation:pulseDotRed 1.5s infinite}
+.timeline-progress-dot.pereezd{background:var(--rggmu-gray);box-shadow:0 0 0 0 rgba(120,144,156,.7);animation:pulseDotGray 1.5s infinite}
 @keyframes pulseDotBlue{0%{box-shadow:0 0 0 0 rgba(0,102,204,.7)}70%{box-shadow:0 0 0 12px rgba(0,102,204,0)}100%{box-shadow:0 0 0 0 rgba(0,102,204,0)}}
 @keyframes pulseDotGreen{0%{box-shadow:0 0 0 0 rgba(76,175,80,.7)}70%{box-shadow:0 0 0 12px rgba(76,175,80,0)}100%{box-shadow:0 0 0 0 rgba(76,175,80,0)}}
 @keyframes pulseDotRed{0%{box-shadow:0 0 0 0 rgba(231,76,60,.7)}70%{box-shadow:0 0 0 12px rgba(231,76,60,0)}100%{box-shadow:0 0 0 0 rgba(231,76,60,0)}}
+@keyframes pulseDotGray{0%{box-shadow:0 0 0 0 rgba(120,144,156,.7)}70%{box-shadow:0 0 0 12px rgba(120,144,156,0)}100%{box-shadow:0 0 0 0 rgba(120,144,156,0)}}
 .lesson-timeline .time-end{font-size:.7rem;font-weight:700;margin-top:2px}
 .lesson-card{flex:1;border-radius:16px;padding:12px 14px;position:relative;cursor:pointer;transition:all .2s}
 .lesson-card.lecture{background:#e6f0fa;border-left:4px solid var(--rggmu-blue)}
 .lesson-card.practice{background:#e8f5e9;border-left:4px solid var(--rggmu-green)}
 .lesson-card.lab{background:var(--rggmu-red-light);border-left:4px solid var(--rggmu-red)}
+.lesson-card.pereezd{background:var(--rggmu-gray-light);border-left:4px solid var(--rggmu-gray)}
 .lesson-card:active{transform:scale(.98)}
 .lesson-card .card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
 .lesson-card .type-badge{display:inline-block;font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,.7);color:#555}
 .lesson-card .type-badge.lecture{color:var(--rggmu-blue-dark)}
 .lesson-card .type-badge.practice{color:#2E7D32}
 .lesson-card .type-badge.lab{color:var(--rggmu-red-dark)}
+.lesson-card .type-badge.pereezd{color:#455A64}
 .lesson-card .card-title{font-size:.95rem;font-weight:700;color:#1a1a2e;line-height:1.3;margin-bottom:8px}
 .lesson-card .card-meta{display:flex;flex-direction:column;gap:4px}
 .lesson-card .card-meta .meta-row{display:flex;align-items:center;gap:6px;font-size:.78rem;color:#777}
@@ -103,6 +121,7 @@ html,body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto
 .lesson-card.lecture .card-progress .progress-fill{background:var(--rggmu-blue)}
 .lesson-card.practice .card-progress .progress-fill{background:var(--rggmu-green)}
 .lesson-card.lab .card-progress .progress-fill{background:var(--rggmu-red)}
+.lesson-card.pereezd .card-progress .progress-fill{background:var(--rggmu-gray)}
 .lesson-card .card-progress .progress-fill::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.75) 50%,rgba(255,255,255,0) 100%);animation:shimmer 1.6s linear infinite}
 @keyframes shimmer{0%{left:-40%}100%{left:100%}}
 .lesson-card .card-note-text{margin-top:8px;padding:6px 10px;background:rgba(0,102,204,.08);border-radius:8px;font-size:.72rem;color:#004A99;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -184,6 +203,7 @@ body.dark .lesson-card{background:#1a1a2e}
 body.dark .lesson-card.lecture{background:#14243a}
 body.dark .lesson-card.practice{background:#142a18}
 body.dark .lesson-card.lab{background:#2e1a1a}
+body.dark .lesson-card.pereezd{background:#2a2a2e}
 body.dark .lesson-card .card-title{color:#fff}
 body.dark .lesson-card .card-meta .meta-row{color:#aaa}
 body.dark .lesson-card .type-badge{background:rgba(255,255,255,.1)}
@@ -302,7 +322,7 @@ body.dark .empty-day .empty-text{color:#666}
 
 var GITHUB_BASE_URL = "https://ilki5.github.io/schedule";
 var CHECK_INTERVAL_MS = 60 * 60 * 1000;
-var DATA_VERSION = 4; // Обновлено для поддержки уникальных ключей дат
+var DATA_VERSION = 4; // Версия кэша
 
 var scheduleData = {};
 var weekdayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
@@ -567,10 +587,10 @@ function getTypeClass(type) {
     if (type === 'Лекция') return 'lecture';
     if (type === 'Практика') return 'practice';
     if (type === 'Лабораторная') return 'lab';
+    if (type === 'Переезд') return 'pereezd'; // НОВЫЙ ТИП
     return 'lecture';
 }
 
-// НОВАЯ ФУНКЦИЯ ДЛЯ УНИКАЛЬНОГО КЛЮЧА
 function getLessonCheckinKey(lessonId, dateStr) {
     return dateStr + '|' + lessonId;
 }
@@ -726,16 +746,18 @@ function renderSchedule() {
         document.getElementById('summaryText').textContent = 'Занятий нет';
         return;
     }
-    var lectureCount = 0, practiceCount = 0, labCount = 0;
+    var lectureCount = 0, practiceCount = 0, labCount = 0, pereezdCount = 0;
     for (var i = 0; i < lessons.length; i++) {
         if (lessons[i].type === 'Лекция') lectureCount++;
         else if (lessons[i].type === 'Практика') practiceCount++;
         else if (lessons[i].type === 'Лабораторная') labCount++;
+        else if (lessons[i].type === 'Переезд') pereezdCount++;
     }
     var parts = [];
     if (lectureCount > 0) parts.push('Лекций ' + lectureCount);
     if (practiceCount > 0) parts.push('Практик ' + practiceCount);
     if (labCount > 0) parts.push('Лаб ' + labCount);
+    if (pereezdCount > 0) parts.push('Переездов ' + pereezdCount);
     
     var pObj = dateStr.split('.');
     var currentDateObj = new Date(Date.UTC(+pObj[2], +pObj[1]-1, +pObj[0]));
@@ -773,7 +795,6 @@ function renderSchedule() {
         var roomDisplay = lesson.room || '';
         var subgroupHtml = lesson.subgroup ? ' <span style="font-size:0.65rem;color:#999;">(' + lesson.subgroup + ')</span>' : '';
         
-        // ИСПОЛЬЗУЕМ УНИКАЛЬНЫЙ КЛЮЧ ДЛЯ КАЖДОЙ ДАТЫ
         var key = getLessonCheckinKey(lesson.id, dateStr);
         
         var hasNote = !!notes[key];
@@ -890,7 +911,10 @@ function updateStats() {
             for (var i = 0; i < scheduleData[dateStr][slot].length; i++) {
                 var lesson = scheduleData[dateStr][slot][i];
                 var subj = lesson.name;
-                var cat = lesson.type === 'Лекция' ? 'Лекции' : lesson.type === 'Практика' ? 'Практики' : lesson.type === 'Лабораторная' ? 'Лабораторные' : lesson.type;
+                var cat = lesson.type === 'Лекция' ? 'Лекции' : 
+                          lesson.type === 'Практика' ? 'Практики' : 
+                          lesson.type === 'Лабораторная' ? 'Лабораторные' : 
+                          lesson.type === 'Переезд' ? 'Переезды' : lesson.type;
                 if (!stats[subj]) stats[subj] = {};
                 if (!stats[subj][cat]) stats[subj][cat] = { total: 0, checked: 0 };
                 stats[subj][cat].total++;
